@@ -27,6 +27,16 @@
  - Inside that folder, save the private key with the name **Private.key**
  - For example, **/etc/incapsula/logs/config/keys/1/Private.key**
 
+**Running the script as a service in Linux:** 
+ - Replace inside "service_configuration/incapsulaSIEM.conf" . The following parameters : $USER$, $GROUP$ and $PYTHON_SCRIPT$ 
+   1) $USER$ username that will execute the script
+   2) $GROUP$ gropname that will execute the script
+   3) $PYTHON_SCRIPT$ path to your python script, including the parametrs passed to the script
+ - Copy incapsulaSIEM.conf to /etc/init/ 
+ - Run 'sudo initctl reload-configuration'
+ - Execute : 'sudo service incapsulaSIEM start' ( You can use start/stop/status)
+ 
+
 **Dependencies:**
 
 The script has two dependencies that may require additional installation modules, according to the operating system that is used:
