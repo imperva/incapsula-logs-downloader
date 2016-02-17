@@ -45,5 +45,6 @@ Both of these can be downloaded using apt-get, pip or any other installer, depen
 	 3. **`$PYTHON_SCRIPT$`** - The path to the **`LogsDownloader.py`** file, followed by the parameters for execution of the script
  - On your system, copy the **incapsulaLogs.conf** file and place it under the **/etc/init/** directory
  - Run **`sudo initctl reload-configuration`** 
+ - Run **`sudo ln -s /etc/init/incapsulaLogs.conf /etc/init.d/incapsulaLogs`**
  - Execute **`sudo service incapsulaLogs start`** 
  - You can use **`start/stop/status`** as any other Linux service
