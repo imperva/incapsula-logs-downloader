@@ -27,16 +27,6 @@
  - Inside that folder, save the private key with the name **Private.key**
  - For example, **/etc/incapsula/logs/config/keys/1/Private.key**
 
-**Running the script as a service in Linux:** 
- - Replace inside "service_configuration/incapsulaSIEM.conf" . The following parameters : $USER$, $GROUP$ and $PYTHON_SCRIPT$ 
-   1) $USER$ username that will execute the script
-   2) $GROUP$ gropname that will execute the script
-   3) $PYTHON_SCRIPT$ path to your python script, including the parametrs passed to the script
- - Copy incapsulaSIEM.conf to /etc/init/ 
- - Run 'sudo initctl reload-configuration'
- - Execute : 'sudo service incapsulaSIEM start' ( You can use start/stop/status)
- 
-
 **Dependencies:**
 
 The script has two dependencies that may require additional installation modules, according to the operating system that is used:
@@ -45,3 +35,15 @@ The script has two dependencies that may require additional installation modules
  - **loggerglue**
 
 Both of these can be downloaded using apt-get, pip or any other installer, depending on the operating system in use.
+
+**Running the script as a service on Linux systems:** 
+
+ - You can run the script as a service on Linux systems by using the configuration file - **linux_service_configuration/incapsulaLogs.conf**
+ -  You should modify the following parameters in the configuration file according to your environment: 
+	 1. **`$USER$`** - The user that will execute the script
+	 2. **`$GROUP$`** - The group name that will execute the script
+	 3. **`$PYTHON_SCRIPT$`** - The path to the **`LogsDownloader.py`** file, followed by the parameters for execution of the script
+ - On your system, copy the **incapsulaLogs.conf** file and place it under the **/etc/init/** directory
+ - Run **`sudo initctl reload-configuration`** 
+ - Execute **`sudo service incapsulaLogs start`** 
+ - You can use **`start/stop/status`** as any other Linux service
