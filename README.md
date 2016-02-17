@@ -36,7 +36,7 @@ The script has two dependencies that may require additional installation modules
 
 Both of these can be downloaded using apt-get, pip or any other installer, depending on the operating system in use.
 
-**Running the script as a service on Linux systems:** 
+**Running the script as a service on Debian systems:** 
 
  - You can run the script as a service on Linux systems by using the configuration file - **linux_service_configuration/incapsulaLogs.conf**
  -  You should modify the following parameters in the configuration file according to your environment: 
