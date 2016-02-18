@@ -36,7 +36,7 @@ The script has two dependencies that may require additional installation modules
 
 Both of these can be downloaded using apt-get, pip or any other installer, depending on the operating system in use.
 
-**Running the script as a service on Linux systems:** 
+**Running the script as a service on Debian systems:** 
 
  - You can run the script as a service on Linux systems by using the configuration file - **linux_service_configuration/incapsulaLogs.conf**
  -  You should modify the following parameters in the configuration file according to your environment: 
@@ -45,5 +45,6 @@ Both of these can be downloaded using apt-get, pip or any other installer, depen
 	 3. **`$PYTHON_SCRIPT$`** - The path to the **`LogsDownloader.py`** file, followed by the parameters for execution of the script
  - On your system, copy the **incapsulaLogs.conf** file and place it under the **/etc/init/** directory
  - Run **`sudo initctl reload-configuration`** 
+ - Run **`sudo ln -s /etc/init/incapsulaLogs.conf /etc/init.d/incapsulaLogs`**
  - Execute **`sudo service incapsulaLogs start`** 
  - You can use **`start/stop/status`** as any other Linux service
