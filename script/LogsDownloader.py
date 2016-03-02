@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Author:       Doron Lehmann, Incapsula, Inc. 
+# Author:       Doron Lehmann, Incapsula, Inc.
 # Date:         2015
 # Description:  Logs Downloader Client
 #
@@ -121,29 +121,39 @@ class LogsDownloader:
             # if there is no last downloaded file
             if last_log_id == "":
                     self.logger.info("No last downloaded file is found - downloading index file and starting to download all the log files in it")
-                    # download the logs.index file
-                    self.logs_file_index.download()
-                    # scan it and download all of the files in it
-                    self.first_time_scan()
+                    try:
+                        # download the logs.index file
+                        self.logs_file_index.download()
+                        # scan it and download all of the files in it
+                        self.first_time_scan()
+                    except Exception, e:
+                        self.logger.error("Failed to downloading index file and starting to download all the log files in it - %s, %s", e.message, traceback.format_exc())
+                        # wait for 30 seconds between each iteration
+                        self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
+                        time.sleep(30)
+                        continue
             # the is a last downloaded log file id
             else:
                 self.logger.debug("The last known downloaded file is %s", last_log_id)
                 # get the next log file name that we should download
                 next_file = self.last_known_downloaded_file_id.get_next_file_name()
-                self.logger.debug("Will now try to download %s" % next_file)
-                # download and handle the next log file
-                success = self.handle_file(next_file, wait_time=20)
-                # if we successfully handled the next log file
-                if success:
-                    self.logger.debug("Successfully handled file %s, updating the last known downloaded file id", next_file)
-                    # set the last handled log file information
-                    self.last_known_downloaded_file_id.move_to_next_file()
-                # we failed to handle the next log file
-                else:
-                    self.logger.info("Could not get log file %s", next_file)
+                self.logger.debug("Will now try to download %s", next_file)
+                try:
+                    # download and handle the next log file
+                    success = self.handle_file(next_file, wait_time=20)
+                    # if we successfully handled the next log file
+                    if success:
+                        self.logger.debug("Successfully handled file %s, updating the last known downloaded file id", next_file)
+                        # set the last handled log file information
+                        self.last_known_downloaded_file_id.move_to_next_file()
+                    # we failed to handle the next log file
+                    else:
+                        self.logger.info("Could not get log file %s. It could be that the log file does not exist yet.", next_file)
+                except Exception, e:
+                        self.logger.error("Failed to download file %s. Error is - %s , %s", next_file, e.message, traceback.format_exc())
             if self.running:
                 # wait for 30 seconds between each iteration
-                self.logger.debug("Sleeping for 30 seconds before trying to fetch logs again...")
+                self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
                 time.sleep(30)
 
     """
@@ -173,7 +183,7 @@ class LogsDownloader:
     """
     def handle_file(self, logfile, wait_time=30):
         # we will try to get the file a max of 3 tries
-        counter = 1
+        counter = 0
         while counter <= 3:
             if self.running:
                 # download the file
@@ -199,13 +209,13 @@ class LogsDownloader:
                         self.logger.info("Saved file %s locally to the 'fail' folder", logfile)
                         break
                 # if the file is not found (could be that it is not generated yet)
-                elif result[0] == "NOT_FOUND":
+                elif result[0] == "NOT_FOUND" or result[0] == "ERROR":
                     # we increase the retry counter
                     counter += 1
                 # if we want to sleep between retries
-                if wait_time > 0:
+                if wait_time > 0 and counter <= 3:
                     if self.running:
-                        self.logger.info("Sleeping for %s seconds until next file download retry number %s out of 3", wait_time, counter - 1)
+                        self.logger.info("Sleeping for %s seconds until next file download retry number %s out of 3", wait_time, counter)
                         time.sleep(wait_time)
             # if the downloader was stopped
             else:
@@ -291,7 +301,7 @@ class LogsDownloader:
                 return "NOT_FOUND", file_content
         except Exception:
             self.logger.error("Error while trying to download file")
-            raise Exception
+            return "ERROR"
 
     """
     Validates a checksum
@@ -527,6 +537,9 @@ class FileDownloader:
             elif e.code == 401:
                 self.logger.error("Authorization error - Failed to download file %s. Response code is %s", url, e.code)
                 raise Exception("Authorization error")
+            elif e.code == 429:
+                self.logger.error("Rate limit exceeded - Failed to download file %s. Response code is %s", url, e.code)
+                raise Exception("Rate limit error")
             else:
                 self.logger.error("An error has occur while making a open connection to %s. %s", url, str(e.reason))
                 raise Exception("Connection error")
