@@ -228,7 +228,7 @@ class LogsDownloader:
     """
     def handle_log_decrypted_content(self, filename, decrypted_file):
         if self.config.SYSLOG_ENABLE == 'YES':
-            for msg in decrypted_file.split('\n'):
+            for msg in decrypted_file.splitlines():
                 if msg != '':
                     emit = loggerglue.emitter.UDPSyslogEmitter((self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)))
                     logger = loggerglue.logger.Logger(emitter=emit, hostname=platform.node())
@@ -242,22 +242,26 @@ class LogsDownloader:
     Decrypt a file content
     """
     def decrypt_file(self, file_content, filename):
+        # each log file is built from a header section and a content section, the two are divided by a |==| mark
+        file_split_content = file_content.split("|==|\n")
+        # get the header section content
+        file_header_content = file_split_content[0]
+        # get the log section content
+        file_log_content = file_split_content[1]
         # if the file is not encrypted - the "key" value in the file header is '-1'
-        file_encryption_key = file_content.find("key:")
+        file_encryption_key = file_header_content.find("key:")
         if file_encryption_key == -1:
-            # get the compressed content
-            compressed_file_content = file_content.split("|==|\n")[1]
             # uncompress the log content
-            uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(compressed_file_content)
+            uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(file_log_content)
         # if the file is encrypted
         else:
-            content_encrypted_sym_key = file_content.split("key:")[1].split("\n")[0]
+            content_encrypted_sym_key = file_header_content.split("key:")[1].splitlines()[0]
             # we expect to have a 'keys' folder that will have the stored private keys
             if not os.path.exists(os.path.join(self.config_path, "keys")):
                 self.logger.error("No encryption keys directory was found and file %s is encrypted", filename)
                 raise Exception("No encryption keys directory was found")
             # get the public key id from the log file header
-            public_key_id = file_content.split("publicKeyId:")[1].split("\n")[0]
+            public_key_id = file_header_content.split("publicKeyId:")[1].splitlines()[0]
             # get the public key directory in the filesystem - each time we upload a new key this id is incremented
             public_key_directory = os.path.join(os.path.join(self.config_path, "keys"), public_key_id)
             # if the key directory does not exists
@@ -265,15 +269,13 @@ class LogsDownloader:
                 self.logger.error("Failed to find a proper certificate for : %s who has the publicKeyId of %s", filename, public_key_id)
                 raise Exception("Failed to find a proper certificate")
             # get the checksum
-            checksum = file_content.split("checksum:")[1].split("\n")[0]
-            # get the encrypted content
-            encrypted_content = file_content.split("|==|\n")[1]
+            checksum = file_header_content.split("checksum:")[1].splitlines()[0]
             # get the private key
             private_key = open(os.path.join(public_key_directory, "Private.key"), "r").read()
             try:
                 rsa_private_key = M2Crypto.RSA.load_key_string(private_key)
                 content_decrypted_sym_key = rsa_private_key.private_decrypt(base64.b64decode(bytearray(content_encrypted_sym_key)), M2Crypto.RSA.pkcs1_padding)
-                uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(AES.new(base64.b64decode(bytearray(content_decrypted_sym_key)), AES.MODE_CBC, 16 * "\x00").decrypt(encrypted_content))
+                uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(AES.new(base64.b64decode(bytearray(content_decrypted_sym_key)), AES.MODE_CBC, 16 * "\x00").decrypt(file_log_content))
                 # we check the content validity by checking the checksum
                 content_is_valid = self.validate_checksum(checksum, uncompressed_and_decrypted_file_content)
                 if not content_is_valid:
@@ -418,7 +420,7 @@ class LogsFileIndex:
             content = file_content.decode("utf-8")
             # validate the file format
             if LogsFileIndex.validate_logs_index_file_format(content):
-                self.content = content.split("\n")
+                self.content = content.splitlines()
                 self.hash_content = set(self.content)
             else:
                 self.logger.error("log.index, Pattern Validation Failed")
