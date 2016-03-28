@@ -543,7 +543,7 @@ class FileDownloader:
                 self.logger.error("Rate limit exceeded - Failed to download file %s. Response code is %s", url, e.code)
                 raise Exception("Rate limit error")
             else:
-                self.logger.error("An error has occur while making a open connection to %s. %s", url, str(e.reason))
+                self.logger.error("An error has occur while making a open connection to %s. %s", url, str(e.code))
                 raise Exception("Connection error")
         # unexpected exception occurred
         except Exception:
