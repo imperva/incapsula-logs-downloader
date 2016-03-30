@@ -513,7 +513,7 @@ class FileDownloader:
             opener = urllib2.build_opener(proxy)
             urllib2.install_opener(opener)
         # build the request
-        request = urllib2.Request(url, headers={"accept": "*/*"})
+        request = urllib2.Request(url)
         base64string = base64.encodestring("%s:%s" % (self.config.API_ID, self.config.API_KEY))
         request.add_header("Authorization", "Basic %s" % base64string)
         try:
