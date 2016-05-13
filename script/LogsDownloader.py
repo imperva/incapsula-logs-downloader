@@ -489,7 +489,7 @@ class Config:
 
 """
 
-Config - A class for downloading files
+FileDownloader - A class for downloading files
 
 """
 
