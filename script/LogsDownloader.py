@@ -514,7 +514,7 @@ class FileDownloader:
             urllib2.install_opener(opener)
         # build the request
         request = urllib2.Request(url)
-        base64string = base64.encodestring("%s:%s" % (self.config.API_ID, self.config.API_KEY))
+        base64string = base64.encodestring("%s:%s" % (self.config.API_ID, self.config.API_KEY)).replace('\n', '')
         request.add_header("Authorization", "Basic %s" % base64string)
         try:
             # open the connection to the URL
