@@ -481,6 +481,8 @@ class Config:
             config.SYSLOG_ENABLE = config_parser.get('SETTINGS', 'SYSLOG_ENABLE')
             config.SYSLOG_ADDRESS = config_parser.get('SETTINGS', 'SYSLOG_ADDRESS')
             config.SYSLOG_PORT = config_parser.get('SETTINGS', 'SYSLOG_PORT')
+            config.USE_CUSTOM_CA_FILE = config_parser.get('SETTINGS', 'USE_CUSTOM_CA_FILE')
+            config.CUSTOM_CA_FILE = config_parser.get('SETTINGS', 'CUSTOM_CA_FILE')
             return config
         else:
             self.logger.error("Could Not find configuration file %s", config_file)
@@ -518,7 +520,10 @@ class FileDownloader:
         request.add_header("Authorization", "Basic %s" % base64string)
         try:
             # open the connection to the URL
-            response = urllib2.urlopen(request, timeout=timeout)
+            if self.config.USE_CUSTOM_CA_FILE == "YES":
+                response = urllib2.urlopen(request, timeout=timeout, cafile=self.config.CUSTOM_CA_FILE)
+            else:
+                response = urllib2.urlopen(request, timeout=timeout)
             # if we got a 200 OK response
             if response.code == 200:
                 self.logger.info("Successfully downloaded file from URL %s" % url)
