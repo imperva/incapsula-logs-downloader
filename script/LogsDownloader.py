@@ -231,8 +231,6 @@ class LogsDownloader:
             for msg in decrypted_file.splitlines():
                 if msg != '':
                     emit = loggerglue.emitter.UDPSyslogEmitter((self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)))
-                    logger = loggerglue.logger.Logger(emitter=emit, hostname=platform.node())
-                    logger.log(msg, prival=loggerglue.constants.LOG_USER | loggerglue.constants.LOG_INFO, timestamp=time.strftime('%b %d %H:%M:%S'))
                     emit.emit(msg)
         if self.config.SAVE_LOCALLY == "YES":
             local_file = open(self.config.PROCESS_DIR + filename, "a+")
