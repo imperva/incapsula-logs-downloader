@@ -46,6 +46,7 @@ import sys
 import threading
 import time
 import traceback
+import ssl
 import urllib2
 import zlib
 from logging import handlers
@@ -115,6 +116,7 @@ class LogsDownloader:
     It this is not the first time, we try to fetch the next log file.
     """
     def get_log_files(self):
+        retries = 0
         while self.running:
             # check what is the last log file that we downloaded
             last_log_id = self.last_known_downloaded_file_id.get_last_log_id()
@@ -140,21 +142,42 @@ class LogsDownloader:
                 self.logger.debug("Will now try to download %s", next_file)
                 try:
                     # download and handle the next log file
-                    success = self.handle_file(next_file, wait_time=20)
+                    success = self.handle_file(next_file)
                     # if we successfully handled the next log file
                     if success:
                         self.logger.debug("Successfully handled file %s, updating the last known downloaded file id", next_file)
                         # set the last handled log file information
                         self.last_known_downloaded_file_id.move_to_next_file()
+                        if self.running:
+                            self.logger.info("Sleeping for 2 seconds before fetching the next logs file")
+                            retries = 0
+                            time.sleep(2)
+
                     # we failed to handle the next log file
                     else:
                         self.logger.info("Could not get log file %s. It could be that the log file does not exist yet.", next_file)
+                        if self.running:
+                            if retries >= 10:
+                                self.logger.info("Failed to download file 10 times, trying to recover.")
+                                # download the logs.index file
+                                self.logs_file_index.download()
+                                logs_in_index = self.logs_file_index.indexed_logs()
+                                if next_file not in logs_in_index:
+                                    self.logger.error("Current downloaded file is not in the index file. This is probably due to a long delay in downloading. Attempting to recover")
+                                    self.last_known_downloaded_file_id.remove_last_log_id()
+                                elif self.last_known_downloaded_file_id.get_next_file_name(skip_files=1) in logs_in_index:
+                                    self.logger.info("Skipping " + next_file)
+                                    self.last_known_downloaded_file_id.move_to_next_file()
+                                else:
+                                    self.logger.info("Next file still does not exist")
+                            else:
+                                # wait for 30 seconds between each iteration
+                                self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
+                                retries += 1
+                                time.sleep(30)
+
                 except Exception, e:
                         self.logger.error("Failed to download file %s. Error is - %s , %s", next_file, e.message, traceback.format_exc())
-            if self.running:
-                # wait for 30 seconds between each iteration
-                self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
-                time.sleep(30)
 
     """
     Scan the logs.index file, and download all the log files in it
@@ -168,7 +191,7 @@ class LogsDownloader:
             if self.running:
                 if LogsFileIndex.validate_log_file_format(str(log_file_name.rstrip('\r\n'))):
                     # download and handle the log file
-                    success = self.handle_file(log_file_name, wait_time=20)
+                    success = self.handle_file(log_file_name)
                     # if we successfully handled the log file
                     if success:
                         # set the last handled log file information
@@ -181,7 +204,7 @@ class LogsDownloader:
     """
     Download a log file, decrypt, unzip, and store it
     """
-    def handle_file(self, logfile, wait_time=30):
+    def handle_file(self, logfile, wait_time=5):
         # we will try to get the file a max of 3 tries
         counter = 0
         while counter <= 3:
@@ -366,13 +389,21 @@ class LastFileId:
             index_file.close()
 
     """
+    Remove the LastKnownDownloadedFileId.txt file. Used to skip missing files.
+    """
+    def remove_last_log_id(self):
+        index_file_path = os.path.join(self.config_path, "LastKnownDownloadedFileId.txt")
+        if os.path.exists(index_file_path):
+            os.remove(index_file_path)
+
+    """
     Gets the next log file name that we should download
     """
-    def get_next_file_name(self):
+    def get_next_file_name(self, skip_files=0):
         # get the current stored last known successfully downloaded log file
         curr_log_file_name_arr = self.get_last_log_id().split("_")
         # get the current id
-        curr_log_file_id = int(curr_log_file_name_arr[1].rstrip(".log")) + 1
+        curr_log_file_id = int(curr_log_file_name_arr[1].rstrip(".log")) + 1 + skip_files
         # build the next log file name
         new_log_file_id = curr_log_file_name_arr[0] + "_" + str(curr_log_file_id) + ".log"
         return new_log_file_id
@@ -518,10 +549,11 @@ class FileDownloader:
         request.add_header("Authorization", "Basic %s" % base64string)
         try:
             # open the connection to the URL
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
             if self.config.USE_CUSTOM_CA_FILE == "YES":
-                response = urllib2.urlopen(request, timeout=timeout, cafile=self.config.CUSTOM_CA_FILE)
+                response = urllib2.urlopen(request, timeout=timeout, cafile=self.config.CUSTOM_CA_FILE, context=ctx)
             else:
-                response = urllib2.urlopen(request, timeout=timeout)
+                response = urllib2.urlopen(request, timeout=timeout, context=ctx)
             # if we got a 200 OK response
             if response.code == 200:
                 self.logger.info("Successfully downloaded file from URL %s" % url)
