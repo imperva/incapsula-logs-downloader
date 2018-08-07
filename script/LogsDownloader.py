@@ -162,14 +162,18 @@ class LogsDownloader:
                                 # download the logs.index file
                                 self.logs_file_index.download()
                                 logs_in_index = self.logs_file_index.indexed_logs()
-                                if next_file not in logs_in_index:
-                                    self.logger.error("Current downloaded file is not in the index file. This is probably due to a long delay in downloading. Attempting to recover")
+                                log_id = self.get_counter_from_file_name(next_file)
+                                first_log_id_in_index = self.get_counter_from_file_name(logs_in_index[0])
+                                if log_id < first_log_id_in_index:
+                                    self.logger.error("Current downloaded file is not in the index file any more. This is probably due to a long delay in downloading. Attempting to recover")
                                     self.last_known_downloaded_file_id.remove_last_log_id()
                                 elif self.last_known_downloaded_file_id.get_next_file_name(skip_files=1) in logs_in_index:
-                                    self.logger.info("Skipping " + next_file)
+                                    self.logger.warning("Skipping " + next_file)
                                     self.last_known_downloaded_file_id.move_to_next_file()
                                 else:
-                                    self.logger.info("Next file still does not exist")
+                                    self.logger.info("Next file still does not exist. Sleeping for 30 seconds and continuing normally")
+                                    retries = 0
+                                    time.sleep(30)
                             else:
                                 # wait for 30 seconds between each iteration
                                 self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
@@ -345,6 +349,13 @@ class LogsDownloader:
         if sig == signal.SIGTERM:
             self.running = False
             self.logger.info("Got a termination signal, will now shutdown and exit gracefully")
+
+    """
+    Gets the next log file name that we should download
+    """
+    def get_counter_from_file_name(self, file_name):
+        curr_log_file_name_arr = file_name.split("_")
+        return int(curr_log_file_name_arr[1].rstrip(".log"))
 
 """
 ****************************************************************
@@ -569,7 +580,7 @@ class FileDownloader:
         # if we got a 401 or 404 responses
         except urllib2.HTTPError, e:
             if e.code == 404:
-                self.logger.error("Could not find file %s. Response code is %s", url, e.code)
+                self.logger.warning("Could not find file %s. Response code is %s", url, e.code)
                 return response_content
             elif e.code == 401:
                 self.logger.error("Authorization error - Failed to download file %s. Response code is %s", url, e.code)
