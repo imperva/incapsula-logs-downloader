@@ -256,8 +256,20 @@ class LogsDownloader:
                     emit = loggerglue.emitter.UDPSyslogEmitter((self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)))
                     emit.emit(msg)
         if self.config.SAVE_LOCALLY == "YES":
-            local_file = open(self.config.PROCESS_DIR + filename, "a+")
-            local_file.writelines(decrypted_file)
+            if self.config.RESELLER == "YES":
+                for line in decrypted_file.splitlines():
+                    if line != '':
+                        account_id = line.split('suid=')[1].split(' ')
+                        if not os.path.exists(os.path.join(self.config.PROCESS_DIR, account_id)):
+                            os.makedirs(os.path.join(self.config.PROCESS_DIR, account_id))
+                            with open(os.path.join(self.config.PROCESS_DIR, account_id, time.strftime("%Y%m%d")), "a+") as f:
+                                f.write(line)
+                        else:
+                            with open(os.path.join(self.config.PROCESS_DIR, account_id, time.strftime("%Y%m%d")), "a+") as f:
+                                f.write(line)
+            else:
+                local_file = open(self.config.PROCESS_DIR + filename, "a+")
+                local_file.writelines(decrypted_file)
 
     """
     Decrypt a file content
@@ -505,6 +517,7 @@ class Config:
             config.PROCESS_DIR = os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), "")
             config.BASE_URL = os.path.join(config_parser.get("SETTINGS", "BASEURL"), "")
             config.SAVE_LOCALLY = config_parser.get("SETTINGS", "SAVE_LOCALLY")
+            config.RESELLER = config_parser.get("SETTINGS", "RESELLER")
             config.USE_PROXY = config_parser.get("SETTINGS", "USEPROXY")
             config.PROXY_SERVER = config_parser.get("SETTINGS", "PROXYSERVER")
             config.SYSLOG_ENABLE = config_parser.get('SETTINGS', 'SYSLOG_ENABLE')
