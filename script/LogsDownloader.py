@@ -511,10 +511,12 @@ class Config:
             config_parser = ConfigParser.ConfigParser()
             config_parser.read(config_file)
             config = Config(self.config_path, self.logger)
-            config.API_ID = config_parser.get("SETTINGS", "APIID")
-            config.API_KEY = config_parser.get("SETTINGS", "APIKEY")
+
+            # Check for environment variables first, then load config values. Backwards compatibility with non-docker deployments
+            config.API_ID = os.environ.get('IMPERVA_API_ID', config_parser.get("SETTINGS", "APIID"))
+            config.API_KEY = os.environ.get('IMPERVA_API_KEY', config_parser.get("SETTINGS", "APIKEY"))
             config.PROCESS_DIR = os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), "")
-            config.BASE_URL = os.path.join(config_parser.get("SETTINGS", "BASEURL"), "")
+            config.BASE_URL = os.environ.get('IMPERVA_API_URL', os.path.join(config_parser.get("SETTINGS", "BASEURL"), ""))
             config.SAVE_LOCALLY = config_parser.get("SETTINGS", "SAVE_LOCALLY")
             config.USE_PROXY = config_parser.get("SETTINGS", "USEPROXY")
             config.PROXY_SERVER = config_parser.get("SETTINGS", "PROXYSERVER")

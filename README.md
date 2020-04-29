@@ -29,10 +29,11 @@
 
 **Dependencies:**
 
-The script has two dependencies that may require additional installation modules, according to the operating system that is used:
-
+The script has the following dependencies that may require additional installation modules, according to the operating system that is used:
+ - **pycrypto**
  - **M2Crypto**
  - **loggerglue**
+ - **swig**
 
 Both of these can be downloaded using apt-get, pip or any other installer, depending on the operating system in use.
 
@@ -48,3 +49,15 @@ Both of these can be downloaded using apt-get, pip or any other installer, depen
  - Run **`sudo ln -s /etc/init/incapsulaLogs.conf /etc/init.d/incapsulaLogs`**
  - Execute **`sudo service incapsulaLogs start`** 
  - You can use **`start/stop/status`** as any other Linux service
+
+ **Running the script as a Docker container**
+
+ - When running the docker image, we look for the following environment variables:
+	1. IMPERVA_API_KEY (required)
+	1. IMPERVA_API_ID (required)
+	1. IMPERVA_API_URL (required)
+	1. USEPROXY (optional)
+	1. PROXYSERVER (optional)
+	1. SYSLOG_ENABLE (optional)
+	1. SYSLOG_ADDRESS (optional)
+	1. SYSLOG_PORT (optional)
