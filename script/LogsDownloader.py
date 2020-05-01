@@ -129,7 +129,7 @@ class LogsDownloader:
                         # scan it and download all of the files in it
                         self.first_time_scan()
                     except Exception as e:
-                        self.logger.error("Failed to downloading index file and starting to download all the log files in it - %s, %s", e.message, traceback.format_exc())
+                        self.logger.error("Failed to downloading index file and starting to download all the log files in it - %s, %s", e, traceback.format_exc())
                         # wait for 30 seconds between each iteration
                         self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
                         time.sleep(30)
@@ -181,7 +181,7 @@ class LogsDownloader:
                                 time.sleep(30)
 
                 except Exception as e:
-                        self.logger.error("Failed to download file %s. Error is - %s , %s", next_file, e.message, traceback.format_exc())
+                        self.logger.error("Failed to download file %s. Error is - %s , %s", next_file, e, traceback.format_exc())
 
     """
     Scan the logs.index file, and download all the log files in it
@@ -227,7 +227,7 @@ class LogsDownloader:
                     # if an exception occurs during the decryption or handling the decrypted content,
                     # we save the raw file to a "fail" folder
                     except Exception as e:
-                        self.logger.info("Saving file %s locally to the 'fail' folder %s %s", logfile, e.message, traceback.format_exc())
+                        self.logger.info("Saving file %s locally to the 'fail' folder %s %s", logfile, e, traceback.format_exc())
                         fail_dir = os.path.join(self.config.PROCESS_DIR, 'fail')
                         if not os.path.exists(fail_dir):
                             os.mkdir(fail_dir)
@@ -309,7 +309,7 @@ class LogsDownloader:
                     self.logger.error("Checksum verification failed for file %s", filename)
                     raise Exception("Checksum verification failed")
             except Exception as e:
-                self.logger.error("Error while trying to decrypt the file %s", filename, e.message, traceback.format_exc())
+                self.logger.error("Error while trying to decrypt the file %s: %s", filename, e)
                 raise Exception("Error while trying to decrypt the file" + filename)
         return uncompressed_and_decrypted_file_content
 
