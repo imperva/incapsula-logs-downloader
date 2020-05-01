@@ -1,0 +1,3 @@
+pycrypto
+M2Crypto
+git+https://github.com/baffolobill/loggerglue.git
