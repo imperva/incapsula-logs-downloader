@@ -19,7 +19,7 @@
  - The **system_logs_level** configuration parameter holds the logging level for the script output log. The supported levels are **info**, **debug** and **error**
  - You can run **`LogsDownloader.py -h`** to get help
 
-**Preparations for using the script:**
+**Preparations for using the script**
 
  - Create a local folder for holding the script configuration, this will be referred as **path_to_config_folder**
  - Create a subfolder named **keys** under the **path_to_config_folder** folder 
@@ -27,7 +27,7 @@
  - Inside that folder, save the private key with the name **Private.key**
  - For example, **/etc/incapsula/logs/config/keys/1/Private.key**
 
-**Dependencies:**
+**Dependencies**
 
 The script has the following dependencies that may require additional installation modules, according to the operating system that is used:
  - **pycrypto**
@@ -37,7 +37,7 @@ The script has the following dependencies that may require additional installati
 
 Both of these can be downloaded using apt-get, pip or any other installer, depending on the operating system in use.
 
-**Running the script as a service on Debian systems:** 
+**Running the script as a service on Debian systems** 
 
  - You can run the script as a service on Linux systems by using the configuration file - **linux_service_configuration/incapsulaLogs.conf**
  -  You should modify the following parameters in the configuration file according to your environment: 
@@ -56,8 +56,16 @@ Both of these can be downloaded using apt-get, pip or any other installer, depen
 	1. IMPERVA_API_KEY (required)
 	1. IMPERVA_API_ID (required)
 	1. IMPERVA_API_URL (required)
-	1. USEPROXY (optional)
-	1. PROXYSERVER (optional)
-	1. SYSLOG_ENABLE (optional)
-	1. SYSLOG_ADDRESS (optional)
-	1. SYSLOG_PORT (optional)
+	1. IMPERVA_LOG_DIRECTORY (optional)
+	1. IMPERVA_SAVE_LOCALLY (optional)
+	1. IMPERVA_USE_PROXY (optional)
+	1. IMPERVA_PROXY_SERVER (optional)
+	1. IMPERVA_SYSLOG_ENABLE (optional)
+	1. IMPERVA_SYSLOG_ADDRESS (optional)
+	1. IMPERVA_SYSLOG_PORT (optional)
+	1. IMPERVA_USE_CUSTOM_CA_FILE (optional)
+	1. IMPERVA_CUSTOM_CA_FILE (optional)
+		1. In order to use a custom CA file, you will need to either build a docker image with the file embedded, or mount a persistent data volume to the image and provide the full path to the file as this variable value
+- Encrypting Logs with docker image
+	1. The recommended method would be to mount a persistent data volume at /etc/incapsula/logs/config/keys that contains numbered subfolders with key files as detailed in [Preparations for using the script](#preparations-for-using-the-script)
+	1. You can also use the dockerfile in this repo to build the image with your keys baked in

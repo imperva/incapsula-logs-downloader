@@ -33,7 +33,7 @@
 #
 
 
-import ConfigParser
+import configparser
 import base64
 import getopt
 import hashlib
@@ -47,7 +47,7 @@ import threading
 import time
 import traceback
 import ssl
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import zlib
 from logging import handlers
 
@@ -128,7 +128,7 @@ class LogsDownloader:
                         self.logs_file_index.download()
                         # scan it and download all of the files in it
                         self.first_time_scan()
-                    except Exception, e:
+                    except Exception as e:
                         self.logger.error("Failed to downloading index file and starting to download all the log files in it - %s, %s", e.message, traceback.format_exc())
                         # wait for 30 seconds between each iteration
                         self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
@@ -180,7 +180,7 @@ class LogsDownloader:
                                 retries += 1
                                 time.sleep(30)
 
-                except Exception, e:
+                except Exception as e:
                         self.logger.error("Failed to download file %s. Error is - %s , %s", next_file, e.message, traceback.format_exc())
 
     """
@@ -226,7 +226,7 @@ class LogsDownloader:
                         return True
                     # if an exception occurs during the decryption or handling the decrypted content,
                     # we save the raw file to a "fail" folder
-                    except Exception, e:
+                    except Exception as e:
                         self.logger.info("Saving file %s locally to the 'fail' folder %s %s", logfile, e.message, traceback.format_exc())
                         fail_dir = os.path.join(self.config.PROCESS_DIR, 'fail')
                         if not os.path.exists(fail_dir):
@@ -254,6 +254,7 @@ class LogsDownloader:
     Saves the decrypted file content to a log file in the filesystem
     """
     def handle_log_decrypted_content(self, filename, decrypted_file):
+        decrypted_file = decrypted_file.decode('utf-8')
         if self.config.SYSLOG_ENABLE == 'YES':
             for msg in decrypted_file.splitlines():
                 if msg != '':
@@ -268,13 +269,13 @@ class LogsDownloader:
     """
     def decrypt_file(self, file_content, filename):
         # each log file is built from a header section and a content section, the two are divided by a |==| mark
-        file_split_content = file_content.split("|==|\n")
+        file_split_content = file_content.split(b"|==|\n")
         # get the header section content
         file_header_content = file_split_content[0]
         # get the log section content
         file_log_content = file_split_content[1]
         # if the file is not encrypted - the "key" value in the file header is '-1'
-        file_encryption_key = file_header_content.find("key:")
+        file_encryption_key = file_header_content.find(b"key:")
         if file_encryption_key == -1:
             # uncompress the log content
             uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(file_log_content)
@@ -306,7 +307,7 @@ class LogsDownloader:
                 if not content_is_valid:
                     self.logger.error("Checksum verification failed for file %s", filename)
                     raise Exception("Checksum verification failed")
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Error while trying to decrypt the file %s", filename, e.message, traceback.format_exc())
                 raise Exception("Error while trying to decrypt the file" + filename)
         return uncompressed_and_decrypted_file_content
@@ -508,23 +509,23 @@ class Config:
     def read(self):
         config_file = os.path.join(self.config_path, "Settings.Config")
         if os.path.exists(config_file):
-            config_parser = ConfigParser.ConfigParser()
+            config_parser = configparser.ConfigParser()
             config_parser.read(config_file)
             config = Config(self.config_path, self.logger)
 
             # Check for environment variables first, then load config values. Backwards compatibility with non-docker deployments
             config.API_ID = os.environ.get('IMPERVA_API_ID', config_parser.get("SETTINGS", "APIID"))
             config.API_KEY = os.environ.get('IMPERVA_API_KEY', config_parser.get("SETTINGS", "APIKEY"))
-            config.PROCESS_DIR = os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), "")
+            config.PROCESS_DIR = os.environ.get('IMPERVA_LOG_DIRECTORY', os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), ""))
             config.BASE_URL = os.environ.get('IMPERVA_API_URL', os.path.join(config_parser.get("SETTINGS", "BASEURL"), ""))
-            config.SAVE_LOCALLY = config_parser.get("SETTINGS", "SAVE_LOCALLY")
-            config.USE_PROXY = config_parser.get("SETTINGS", "USEPROXY")
-            config.PROXY_SERVER = config_parser.get("SETTINGS", "PROXYSERVER")
-            config.SYSLOG_ENABLE = config_parser.get('SETTINGS', 'SYSLOG_ENABLE')
-            config.SYSLOG_ADDRESS = config_parser.get('SETTINGS', 'SYSLOG_ADDRESS')
-            config.SYSLOG_PORT = config_parser.get('SETTINGS', 'SYSLOG_PORT')
-            config.USE_CUSTOM_CA_FILE = config_parser.get('SETTINGS', 'USE_CUSTOM_CA_FILE')
-            config.CUSTOM_CA_FILE = config_parser.get('SETTINGS', 'CUSTOM_CA_FILE')
+            config.SAVE_LOCALLY = os.environ.get('IMPERVA_SAVE_LOCALLY', config_parser.get("SETTINGS", "SAVE_LOCALLY"))
+            config.USE_PROXY = os.environ.get('IMPERVA_USE_PROXY', config_parser.get("SETTINGS", "USEPROXY"))
+            config.PROXY_SERVER = os.environ.get('IMPERVA_PROXY_SERVER', config_parser.get("SETTINGS", "PROXYSERVER"))
+            config.SYSLOG_ENABLE = os.environ.get('IMPERVA_SYSLOG_ENABLE', config_parser.get('SETTINGS', 'SYSLOG_ENABLE'))
+            config.SYSLOG_ADDRESS = os.environ.get('IMPERVA_SYSLOG_ADDRESS', config_parser.get('SETTINGS', 'SYSLOG_ADDRESS'))
+            config.SYSLOG_PORT = os.environ.get('IMPERVA_SYSLOG_PORT', config_parser.get('SETTINGS', 'SYSLOG_PORT'))
+            config.USE_CUSTOM_CA_FILE = os.environ.get('IMPERVA_USE_CUSTOM_CA_FILE', config_parser.get('SETTINGS', 'USE_CUSTOM_CA_FILE'))
+            config.CUSTOM_CA_FILE = os.environ.get('IMPERVA_CUSTOM_CA_FILE', config_parser.get('SETTINGS', 'CUSTOM_CA_FILE'))
             return config
         else:
             self.logger.error("Could Not find configuration file %s", config_file)
@@ -553,20 +554,23 @@ class FileDownloader:
         # if we are using a proxy server - read its configurations
         if self.config.USE_PROXY == "YES":
             proxy_dict = {"http": self.config.PROXY_SERVER, "https": self.config.PROXY_SERVER, "ftp": self.config.PROXY_SERVER}
-            proxy = urllib2.ProxyHandler(proxy_dict)
-            opener = urllib2.build_opener(proxy)
-            urllib2.install_opener(opener)
+            proxy = urllib.request.ProxyHandler(proxy_dict)
+            opener = urllib.request.build_opener(proxy)
+            urllib.request.install_opener(opener)
         # build the request
-        request = urllib2.Request(url)
-        base64string = base64.encodestring("%s:%s" % (self.config.API_ID, self.config.API_KEY)).replace('\n', '')
+        request = urllib.request.Request(url)
+
+        auth_string = bytes("%s:%s" % (self.config.API_ID, self.config.API_KEY), 'utf-8')
+
+        base64string = base64.b64encode(auth_string).decode("ascii")
         request.add_header("Authorization", "Basic %s" % base64string)
         try:
             # open the connection to the URL
             ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
             if self.config.USE_CUSTOM_CA_FILE == "YES":
-                response = urllib2.urlopen(request, timeout=timeout, cafile=self.config.CUSTOM_CA_FILE, context=ctx)
+                response = urllib.request.urlopen(request, timeout=timeout, cafile=self.config.CUSTOM_CA_FILE, context=ctx)
             else:
-                response = urllib2.urlopen(request, timeout=timeout, context=ctx)
+                response = urllib.request.urlopen(request, timeout=timeout, context=ctx)
             # if we got a 200 OK response
             if response.code == 200:
                 self.logger.info("Successfully downloaded file from URL %s" % url)
@@ -580,7 +584,7 @@ class FileDownloader:
             # return the content string
             return response_content
         # if we got a 401 or 404 responses
-        except urllib2.HTTPError, e:
+        except urllib.error.HTTPError as e:
             if e.code == 404:
                 self.logger.warning("Could not find file %s. Response code is %s", url, e.code)
                 return response_content
@@ -609,15 +613,15 @@ if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'c:l:v:h', ['configpath=', 'logpath=', 'loglevel=', 'help'])
     except getopt.GetoptError:
-        print "Error starting Logs Downloader. The following arguments should be provided:" \
+        print("Error starting Logs Downloader. The following arguments should be provided:" \
               " \n '-c' - path to the config folder" \
               " \n '-l' - path to the system logs folder" \
               " \n '-v' - LogsDownloader system logs level" \
-              " \n Or no arguments at all in order to use default paths"
+              " \n Or no arguments at all in order to use default paths")
         sys.exit(2)
     for opt, arg in opts:
         if opt in ('-h', '--help'):
-            print 'LogsDownloader.py -c <path_to_config_folder> -l <path_to_system_logs_folder> -v <system_logs_level>'
+            print('LogsDownloader.py -c <path_to_config_folder> -l <path_to_system_logs_folder> -v <system_logs_level>')
             sys.exit(2)
         elif opt in ('-c', '--configpath'):
             path_to_config_folder = arg
