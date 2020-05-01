@@ -271,11 +271,11 @@ class LogsDownloader:
         # each log file is built from a header section and a content section, the two are divided by a |==| mark
         file_split_content = file_content.split(b"|==|\n")
         # get the header section content
-        file_header_content = file_split_content[0]
+        file_header_content = file_split_content[0].decode('utf-8')
         # get the log section content
         file_log_content = file_split_content[1]
         # if the file is not encrypted - the "key" value in the file header is '-1'
-        file_encryption_key = file_header_content.find(b"key:")
+        file_encryption_key = file_header_content.find("key:")
         if file_encryption_key == -1:
             # uncompress the log content
             uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(file_log_content)
@@ -283,6 +283,7 @@ class LogsDownloader:
         else:
             content_encrypted_sym_key = file_header_content.split("key:")[1].splitlines()[0]
             # we expect to have a 'keys' folder that will have the stored private keys
+            self.logger.warning('Keys Dir: %s', os.path.join(self.config_path, "keys"))
             if not os.path.exists(os.path.join(self.config_path, "keys")):
                 self.logger.error("No encryption keys directory was found and file %s is encrypted", filename)
                 raise Exception("No encryption keys directory was found")
@@ -297,10 +298,10 @@ class LogsDownloader:
             # get the checksum
             checksum = file_header_content.split("checksum:")[1].splitlines()[0]
             # get the private key
-            private_key = open(os.path.join(public_key_directory, "Private.key"), "r").read()
+            private_key = bytes(open(os.path.join(public_key_directory, "Private.key"), "r").read(), 'utf-8')
             try:
                 rsa_private_key = M2Crypto.RSA.load_key_string(private_key)
-                content_decrypted_sym_key = rsa_private_key.private_decrypt(base64.b64decode(bytearray(content_encrypted_sym_key)), M2Crypto.RSA.pkcs1_padding)
+                content_decrypted_sym_key = rsa_private_key.private_decrypt(base64.b64decode(bytes(content_encrypted_sym_key, 'utf-8')), M2Crypto.RSA.pkcs1_padding)
                 uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(AES.new(base64.b64decode(bytearray(content_decrypted_sym_key)), AES.MODE_CBC, 16 * "\x00").decrypt(file_log_content))
                 # we check the content validity by checking the checksum
                 content_is_valid = self.validate_checksum(checksum, uncompressed_and_decrypted_file_content)
