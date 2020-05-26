@@ -47,7 +47,7 @@ import threading
 import time
 import traceback
 import ssl
-import urllib.request, urllib.error, urllib.parse
+import urllib3
 import zlib
 from logging import handlers
 
@@ -457,6 +457,7 @@ class LogsFileIndex:
         self.logger.info("Downloading logs index file...")
         # try to get the logs.index file
         file_content = self.file_downloader.request_file_content(self.config.BASE_URL + "logs.index")
+        self.logger.info('Index downloader: %s' % file_content)
         # if we got the file content
         if file_content != "":
             content = file_content.decode("utf-8")
@@ -468,7 +469,7 @@ class LogsFileIndex:
                 self.logger.error("log.index, Pattern Validation Failed")
                 raise Exception
         else:
-            raise Exception
+            raise Exception('Index file does not yet exist, please allow time for files to be generated.')
 
     """
     Validates that format name of the logs files inside the logs index file
@@ -552,52 +553,50 @@ class FileDownloader:
     def request_file_content(self, url, timeout=20):
         # default value
         response_content = ""
-        # if we are using a proxy server - read its configurations
-        if self.config.USE_PROXY == "YES":
-            proxy_dict = {"http": self.config.PROXY_SERVER, "https": self.config.PROXY_SERVER, "ftp": self.config.PROXY_SERVER}
-            proxy = urllib.request.ProxyHandler(proxy_dict)
-            opener = urllib.request.build_opener(proxy)
-            urllib.request.install_opener(opener)
-        # build the request
-        request = urllib.request.Request(url)
-
-        auth_string = bytes("%s:%s" % (self.config.API_ID, self.config.API_KEY), 'utf-8')
-
-        base64string = base64.b64encode(auth_string).decode("ascii")
-        request.add_header("Authorization", "Basic %s" % base64string)
+        
+        #https://github.com/imperva/incapsula-logs-downloader/pull/7
+        if self.config.USE_PROXY == "YES" and self.config.USE_CUSTOM_CA_FILE == "YES":
+            self.logger.info("Using proxy %s" % self.config.PROXY_SERVER)
+            https = urllib3.ProxyManager(self.config.PROXY_SERVER, ca_certs=self.config.CUSTOM_CA_FILE, cert_reqs='CERT_REQUIRED', timeout=timeout)
+        elif self.config.USE_PROXY == "YES" and self.config.USE_CUSTOM_CA_FILE == "NO":
+            self.logger.info("Using proxy %s" % self.config.PROXY_SERVER)
+            https = urllib3.ProxyManager(self.config.PROXY_SERVER, cert_reqs='CERT_REQUIRED', timeout=timeout)
+        elif self.config.USE_PROXY == "NO" and self.config.USE_CUSTOM_CA_FILE == "YES":
+            https = urllib3.PoolManager(ca_certs=self.config.CUSTOM_CA_FILE, cert_reqs='CERT_REQUIRED', timeout=timeout)
+        else:  # no proxy and no custom CA file
+            https = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', timeout=timeout)
+        
         try:
-            # open the connection to the URL
-            ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-            if self.config.USE_CUSTOM_CA_FILE == "YES":
-                response = urllib.request.urlopen(request, timeout=timeout, cafile=self.config.CUSTOM_CA_FILE, context=ctx)
-            else:
-                response = urllib.request.urlopen(request, timeout=timeout, context=ctx)
-            # if we got a 200 OK response
-            if response.code == 200:
+            #Download the file
+            auth_header = urllib3.make_headers(basic_auth='%s:%s' % (self.config.API_ID, self.config.API_KEY))
+            response = https.request('GET', url, headers=auth_header)
+
+            # if we get a 200 OK response
+            if response.status == 200:
                 self.logger.info("Successfully downloaded file from URL %s" % url)
                 # read the response content
-                response_content = response.read()
-            # if we got another response code
+                response_content = response.data
+            # if we get another response code
+            elif response.status == 404:
+                self.logger.warning("Could not find file %s. Response code is %s", url, response.status)
+                return response_content
+            elif response.status == 401:
+                self.logger.error("Authorization error - Failed to download file %s. Response code is %s", url, response.status)
+                raise Exception("Authorization error")
+            elif response.status == 429:
+                self.logger.error("Rate limit exceeded - Failed to download file %s. Response code is %s", url, response.status)
+                raise Exception("Rate limit error")
             else:
-                self.logger.error("Failed to download file %s. Response code is %s. Info is %s", url, response.code, response.info())
+                self.logger.error("Failed to download file %s. Response code is %s. Data is %s", url, response.status, response.data)
             # close the response
             response.close()
             # return the content string
             return response_content
-        # if we got a 401 or 404 responses
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                self.logger.warning("Could not find file %s. Response code is %s", url, e.code)
-                return response_content
-            elif e.code == 401:
-                self.logger.error("Authorization error - Failed to download file %s. Response code is %s", url, e.code)
-                raise Exception("Authorization error")
-            elif e.code == 429:
-                self.logger.error("Rate limit exceeded - Failed to download file %s. Response code is %s", url, e.code)
-                raise Exception("Rate limit error")
-            else:
-                self.logger.error("An error has occur while making a open connection to %s. %s", url, str(e.code))
-                raise Exception("Connection error")
+
+        except urllib3.exceptions.HTTPError as e:
+            print('Request failed:', e)
+            self.logger.error("An error has occur while making a open connection to %s. %s", url, str(e.reason))
+            raise Exception("Connection error")
         # unexpected exception occurred
         except Exception:
             self.logger.error("An error has occur while making a open connection to %s. %s", url, traceback.format_exc())

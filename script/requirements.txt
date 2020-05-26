@@ -1,3 +1,4 @@
 pycrypto
 M2Crypto
+urllib3
 git+https://github.com/baffolobill/loggerglue.git
