@@ -27,6 +27,9 @@
  - Inside that folder, save the private key with the name **Private.key**
  - For example, **/etc/incapsula/logs/config/keys/1/Private.key**
 
+**Syslog Notes**
+As of now, syslog only supports forwarding over UDP. Due to the number of fields in an event, it is likely that some events will become truncated. Please process the file directly if this is an issue, until TCP support is added.
+
 **Dependencies**
 
 The script has the following dependencies that may require additional installation modules, according to the operating system that is used:
