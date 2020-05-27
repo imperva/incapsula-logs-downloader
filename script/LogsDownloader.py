@@ -50,11 +50,9 @@ import ssl
 import urllib3
 import zlib
 from logging import handlers
+import socket
 
 import M2Crypto
-import loggerglue
-import loggerglue.emitter
-import loggerglue.logger
 from Crypto.Cipher import AES
 
 """
@@ -256,10 +254,23 @@ class LogsDownloader:
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
         if self.config.SYSLOG_ENABLE == 'YES':
+            syslogger = logging.getLogger("syslog")
+            syslogger.setLevel(logging.INFO)
+
+            if self.config.SYSLOG_PROTO == 'TCP':
+                self.logger.info('Syslog enabled, using TCP')
+                syslog = logging.handlers.SysLogHandler(address=(self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)), socktype=socket.SOCK_STREAM)
+            else:
+                self.logger.info('Syslog enabled, using UDP')
+                syslog = logging.handlers.SysLogHandler(address=(self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)))
+            syslogger.addHandler(syslog)
             for msg in decrypted_file.splitlines():
                 if msg != '':
-                    emit = loggerglue.emitter.UDPSyslogEmitter((self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)))
-                    emit.emit(msg)
+                    try:
+                        syslogger.info(msg)
+                    except:
+                        self.logger.error('Error sending log file to syslog server %s on port %s via protocol %s', self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, self.config.SYSLOG_PROTO)
+
         if self.config.SAVE_LOCALLY == "YES":
             local_file = open(self.config.PROCESS_DIR + filename, "a+")
             local_file.writelines(decrypted_file)
@@ -457,7 +468,6 @@ class LogsFileIndex:
         self.logger.info("Downloading logs index file...")
         # try to get the logs.index file
         file_content = self.file_downloader.request_file_content(self.config.BASE_URL + "logs.index")
-        self.logger.info('Index downloader: %s' % file_content)
         # if we got the file content
         if file_content != "":
             content = file_content.decode("utf-8")
@@ -526,6 +536,7 @@ class Config:
             config.SYSLOG_ENABLE = os.environ.get('IMPERVA_SYSLOG_ENABLE', config_parser.get('SETTINGS', 'SYSLOG_ENABLE'))
             config.SYSLOG_ADDRESS = os.environ.get('IMPERVA_SYSLOG_ADDRESS', config_parser.get('SETTINGS', 'SYSLOG_ADDRESS'))
             config.SYSLOG_PORT = os.environ.get('IMPERVA_SYSLOG_PORT', config_parser.get('SETTINGS', 'SYSLOG_PORT'))
+            config.SYSLOG_PROTO = os.environ.get('IMPERVA_SYSLOG_PROTO', config_parser.get('SETTINGS','SYSLOG_PROTO'))
             config.USE_CUSTOM_CA_FILE = os.environ.get('IMPERVA_USE_CUSTOM_CA_FILE', config_parser.get('SETTINGS', 'USE_CUSTOM_CA_FILE'))
             config.CUSTOM_CA_FILE = os.environ.get('IMPERVA_CUSTOM_CA_FILE', config_parser.get('SETTINGS', 'CUSTOM_CA_FILE'))
             return config
