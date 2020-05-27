@@ -35,7 +35,6 @@ As of now, syslog only supports forwarding over UDP. Due to the number of fields
 The script has the following dependencies that may require additional installation modules, according to the operating system that is used:
  - **pycrypto**
  - **M2Crypto**
- - **loggerglue**
  - **swig**
 
 Both of these can be downloaded using apt-get, pip or any other installer, depending on the operating system in use.
@@ -66,6 +65,7 @@ Both of these can be downloaded using apt-get, pip or any other installer, depen
 	1. IMPERVA_SYSLOG_ENABLE (optional)
 	1. IMPERVA_SYSLOG_ADDRESS (optional)
 	1. IMPERVA_SYSLOG_PORT (optional)
+	1. IMPERVA_SYSLOG_PROTO (optional)
 	1. IMPERVA_USE_CUSTOM_CA_FILE (optional)
 	1. IMPERVA_CUSTOM_CA_FILE (optional)
 		1. In order to use a custom CA file, you will need to either build a docker image with the file embedded, or mount a persistent data volume to the image and provide the full path to the file as this variable value
