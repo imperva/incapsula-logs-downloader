@@ -1,5 +1,9 @@
 # CHANGELOG.md
 
+## 2.2.0
+Features:
+  - enable syslog forwarding over TCP
+
 ## 2.1.0
 
 Features:
