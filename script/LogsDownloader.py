@@ -254,7 +254,7 @@ class LogsDownloader:
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
         if self.config.SYSLOG_ENABLE == 'YES':
-            syslogger = logging.getLogger()
+            syslogger = logging.getLogger("syslog")
             syslogger.setLevel(logging.INFO)
 
             if self.config.SYSLOG_PROTO == 'TCP':
