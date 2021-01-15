@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Author:       Doron Lehmann, Incapsula, Inc.
 # Date:         2015
@@ -66,7 +66,10 @@ class LogsDownloader:
     running = True
 
     def __init__(self, config_path, system_log_path, log_level):
-        # set a log file for the downloader
+        # Add by Maytee Sittipornchaisakul
+        # set default output syslog
+        self.setOutputSyslogHandler = False
+    	# set a log file for the downloader
         self.logger = logging.getLogger("logsDownloader")
         # default log directory for the downloader
         log_dir = system_log_path
@@ -144,12 +147,13 @@ class LogsDownloader:
                     # if we successfully handled the next log file
                     if success:
                         self.logger.debug("Successfully handled file %s, updating the last known downloaded file id", next_file)
-                        # set the last handled log file information
-                        self.last_known_downloaded_file_id.move_to_next_file()
+
                         if self.running:
                             self.logger.info("Sleeping for 2 seconds before fetching the next logs file")
                             retries = 0
                             time.sleep(2)
+                            # set the last handled log file information
+                            self.last_known_downloaded_file_id.move_to_next_file()                            
 
                     # we failed to handle the next log file
                     else:
@@ -253,6 +257,7 @@ class LogsDownloader:
     """
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
+
         if self.config.SYSLOG_ENABLE == 'YES':
             syslogger = logging.getLogger("syslog")
             syslogger.setLevel(logging.INFO)
@@ -263,7 +268,12 @@ class LogsDownloader:
             else:
                 self.logger.info('Syslog enabled, using UDP')
                 syslog = logging.handlers.SysLogHandler(address=(self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)))
-            syslogger.addHandler(syslog)
+            
+            ### Add by Maytee Sittipornchaisakul
+            if not self.setOutputSyslogHandler:
+                syslogger.addHandler(syslog)
+                self.setOutputSyslogHandler = True                
+            
             for msg in decrypted_file.splitlines():
                 if msg != '':
                     try:
