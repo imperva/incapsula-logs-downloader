@@ -51,6 +51,8 @@ import urllib3
 import zlib
 from logging import handlers
 import socket
+from datetime import datetime
+import re
 
 import M2Crypto
 from Crypto.Cipher import AES
@@ -277,6 +279,19 @@ class LogsDownloader:
             for msg in decrypted_file.splitlines():
                 if msg != '':
                     try:
+                        ## Messages should match the following REGEX:
+                        ## (?<time>(?:\w+ +){2,3}(?:\d+:){2}\d+|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.[\w\-\:\+]{3,12}):?\s*(?:(?<host>[^: ]+) ?:?)?\s*(?<ident>.*CEF.+?(?=0\|)|%ASA[0-9\-]{8,10})\s*:?(?<message>0\|.*|.*)
+                        pattern = 'start=(\d+)'
+                        result = re.search(pattern,msg)
+                        ms = result.group(1)
+                        dateobject = datetime.datetime.fromtimestamp(ms/1000.0)
+                        str_time = dateobject.strftime("%b %d %H:%M:%S")
+
+                        pattern = 'sourceServiceName=((\w+\.*)+)'
+                        result = re.search(pattern,msg)
+                        str_hostname = result.group(1)
+
+                        msg = str_time +' '+str_hostname+" "+msg
                         syslogger.info(msg)
                     except:
                         self.logger.error('Error sending log file to syslog server %s on port %s via protocol %s', self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, self.config.SYSLOG_PROTO)
