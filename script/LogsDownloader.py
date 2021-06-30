@@ -292,6 +292,9 @@ class LogsDownloader:
                         str_hostname = result.group(1)
 
                         msg = str_time +' '+str_hostname+" "+msg
+
+                        self.logger.debug('Sending a message with the following content: '+msg)
+
                         syslogger.info(msg)
                     except:
                         self.logger.error('Error sending log file to syslog server %s on port %s via protocol %s', self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, self.config.SYSLOG_PROTO)
