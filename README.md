@@ -30,7 +30,7 @@ pip install -r requirements.txt
 ## Getting Started
 
 - Create a local folder for holding the script configuration, this will be referred as **path_to_config_folder**
-	- copy the Settings.Config file to this folder
+	- copy the Settings.Config.example file to this folder as Settings.Config.
 	- Create a subfolder named **keys** under the **path_to_config_folder** folder 
 	- In the keys subfolder, create a subfolder with a single digit name. This digit should specify whether this is the first encryption key uploaded (1), the second (2) or so on
 	- Inside that folder, save the private key with the name **Private.key**:
