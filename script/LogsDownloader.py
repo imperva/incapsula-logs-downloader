@@ -265,6 +265,8 @@ class LogsDownloader:
             if self.config.SYSLOG_PROTO == 'TCP':
                 self.logger.info('Syslog enabled, using TCP')
                 syslog = logging.handlers.SysLogHandler(address=(self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)), socktype=socket.SOCK_STREAM)
+                syslog.setFormatter(logging.Formatter('%(message)s\n'))
+                syslog.append_nul = False
             else:
                 self.logger.info('Syslog enabled, using UDP')
                 syslog = logging.handlers.SysLogHandler(address=(self.config.SYSLOG_ADDRESS, int(self.config.SYSLOG_PORT)))
