@@ -257,7 +257,9 @@ class LogsDownloader:
     """
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
-
+        ## to remove control chars from decrypted_file string, as splitlines() will otherwise split at those
+		table = str.maketrans("\x1d\x0c\x1c\x1e", "....")
+		
         if self.config.SYSLOG_ENABLE == 'YES':
             syslogger = logging.getLogger("syslog")
             syslogger.setLevel(logging.INFO)
@@ -273,8 +275,9 @@ class LogsDownloader:
             if not self.setOutputSyslogHandler:
                 syslogger.addHandler(syslog)
                 self.setOutputSyslogHandler = True                
-            
-            for msg in decrypted_file.splitlines():
+           
+ 		    ## translate(table) removes control chars 
+            for msg in decrypted_file.translate(table).splitlines():
                 if msg != '':
                     try:
                         syslogger.info(msg)
