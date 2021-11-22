@@ -299,7 +299,12 @@ class LogsDownloader:
         file_encryption_key = file_header_content.find("key:")
         if file_encryption_key == -1:
             # uncompress the log content
-            uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(file_log_content)
+            try:
+                uncompressed_and_decrypted_file_content = (
+                    zlib.decompressobj().decompress(file_log_content)
+                )
+            except zlib.error:
+                uncompressed_and_decrypted_file_content = file_log_content
         # if the file is encrypted
         else:
             content_encrypted_sym_key = file_header_content.split("key:")[1].splitlines()[0]
