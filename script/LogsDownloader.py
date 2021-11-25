@@ -258,8 +258,8 @@ class LogsDownloader:
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
         ## to remove control chars from decrypted_file string, as splitlines() will otherwise split at those
-		table = str.maketrans("\x1d\x0c\x1c\x1e", "....")
-		
+        table = str.maketrans("\x1d\x0c\x1c\x1e\x0b\x85\u2028\u2029", "........")
+
         if self.config.SYSLOG_ENABLE == 'YES':
             syslogger = logging.getLogger("syslog")
             syslogger.setLevel(logging.INFO)
@@ -276,9 +276,15 @@ class LogsDownloader:
                 syslogger.addHandler(syslog)
                 self.setOutputSyslogHandler = True                
            
- 		    ## translate(table) removes control chars 
+            ## translate(table) removes control chars 
             for msg in decrypted_file.translate(table).splitlines():
                 if msg != '':
+                    ### unfortnaetly some fields have different meaning in ArcSight CEF
+                    ### https://docs.imperva.com/bundle/cloud-application-security/page/more/log-file-structure.htm
+                    msg = msg.replace("spt=", "dpt=") # Server Port/spt in CEF: dpt
+                    msg = msg.replace("cpt=", "spt=") # Source(Client) Port cpt in CEF: spt
+                    msg = msg.replace("sip=", "dst=") # Server IP in CEF: dst		     
+                 
                     try:
                         syslogger.info(msg)
                     except:
