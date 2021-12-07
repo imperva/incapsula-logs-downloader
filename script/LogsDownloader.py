@@ -149,9 +149,10 @@ class LogsDownloader:
                         self.logger.debug("Successfully handled file %s, updating the last known downloaded file id", next_file)
 
                         if self.running:
-                            self.logger.info("Sleeping for 2 seconds before fetching the next logs file")
+						    # original sleeps for 3 seconds, which is way too long.
+                            self.logger.info("Sleeping for 0.1 seconds before fetching the next logs file") 
                             retries = 0
-                            time.sleep(2)
+                            time.sleep(0.1)
                             # set the last handled log file information
                             self.last_known_downloaded_file_id.move_to_next_file()                            
 
@@ -210,7 +211,9 @@ class LogsDownloader:
     """
     Download a log file, decrypt, unzip, and store it
     """
-    def handle_file(self, logfile, wait_time=5):
+    def handle_file(self, logfile, wait_time=1):
+	    # original wait time was 5, changed to 1 to speed up the file handling
+		# if you have a very busy cloud env.
         # we will try to get the file a max of 3 tries
         counter = 0
         while counter <= 3:
