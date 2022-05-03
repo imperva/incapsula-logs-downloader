@@ -6,7 +6,7 @@ RUN chmod 755 /usr/local/bin/imperva-connector.py
 
 # We need SWIG as well
 RUN apt-get update
-RUN apt-get install -y swig openssl python-pip build-essential python-dev libssl-dev git
+RUN apt-get install -y swig openssl python3-pip build-essential python-dev libssl-dev git
 
 # Copy requirements.txt and install with pip
 COPY ./script/requirements.txt /
