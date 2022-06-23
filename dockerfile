@@ -6,11 +6,11 @@ RUN chmod 755 /usr/local/bin/imperva-connector.py
 
 # We need SWIG as well
 RUN apt-get update
-RUN apt-get install -y swig openssl python-pip build-essential python-dev libssl-dev git
+RUN apt-get install -y swig openssl python3-pip build-essential python3-dev libssl-dev git
 
 # Copy requirements.txt and install with pip
 COPY ./script/requirements.txt /
-RUN pip install -r /requirements.txt
+RUN python3 -m pip install -r /requirements.txt
 
 # Copy our settings
 COPY ./config/Settings.Config /etc/incapsula/logs/config/Settings.Config
