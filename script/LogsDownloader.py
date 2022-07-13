@@ -460,7 +460,7 @@ class LastFileId:
         index_file_path = os.path.join(self.config_path, "LastKnownDownloadedFileId.txt")
         # Create a lock file name and acquire
         lock_index_file_path = "{}.lock".format(index_file_path)
-        lock = FileLock(lock_index_file_path, timeout=5)
+        lock = FileLock(lock_index_file_path, timeout=60)
         # if the file exists - get the log file id from it
 
         if os.path.exists(index_file_path) and not lock.is_locked:
@@ -613,7 +613,7 @@ class SyslogClient:
         if message.startswith("CEF") or message.startswith("LEEF"):
             hostname = str(message.split("sourceServiceName=")[1]).split(" ")[0] or "imperva.com"
         else:
-            "imperva.com"
+            hostname = "imperva.com"
         application = "cwaf"
         data = "{} {} {} {} {}".format(priority, timestamp, hostname, application, message)
         try:
