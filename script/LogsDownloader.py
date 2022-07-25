@@ -49,14 +49,13 @@ import traceback
 import ssl
 import urllib3
 import zlib
-from logging import handlers
+
 
 import M2Crypto
 from Cryptodome.Cipher import AES
 
 import datetime
 import socket
-from filelock import FileLock, Timeout
 
 FACILITY = {
     'kern': 0, 'user': 1, 'mail': 2, 'daemon': 3,
@@ -458,19 +457,12 @@ class LastFileId:
     def get_last_log_id(self):
         # gets the LastKnownDownloadedFileId file
         index_file_path = os.path.join(self.config_path, "LastKnownDownloadedFileId.txt")
-        # Create a lock file name and acquire
-        lock_index_file_path = "{}.lock".format(index_file_path)
-        lock = FileLock(lock_index_file_path, timeout=60)
+
         # if the file exists - get the log file id from it
 
-        if os.path.exists(index_file_path) and not lock.is_locked:
-            lock.acquire()
-            try:
-                with open(index_file_path, "r+") as index_file:
-                    lock.release()
-                    return index_file.read()
-            finally:
-                lock.release()
+        if os.path.exists(index_file_path):
+            with open(index_file_path, "r+") as index_file:
+                return index_file.read()
         # return an empty string if no file exists
         return ''
 
@@ -747,7 +739,6 @@ class FileDownloader:
             self.logger.error("An error has occur while making a open connection to %s. %s", url,
                 traceback.format_exc())
             raise Exception("Connection error")
-
 
 if __name__ == "__main__":
     # default paths
