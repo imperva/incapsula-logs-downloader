@@ -49,7 +49,9 @@ import traceback
 import ssl
 import urllib3
 import zlib
-
+from splunk_handler import SplunkHandler
+import logging
+from logging import handlers
 
 import M2Crypto
 from Cryptodome.Cipher import AES
@@ -317,6 +319,54 @@ class LogsDownloader:
                     except OSError as e:
                         self.logger.error(e)
                         time.sleep(5)
+
+        if self.config.SPLUNK_HEC == "YES":
+            logging.debug("Starting splunk logger.")
+            # Instantiate the splunk logger
+            splunk_handler = SplunkHandler(
+                host=self.config.SPLUNK_HEC_IP,
+                port=self.config.SPLUNK_HEC_PORT,
+                token=self.config.SPLUNK_HEC_TOKEN,
+                index=self.config.SPLUNK_HEC_INDEX,
+                sourcetype='imperva_incapsula_cef',
+                debug=False,
+                verify=False,
+                retry_count=5,
+                source='logdownloader',
+                retry_backoff=2.0,
+                allow_overrides=True,
+                timeout=60,
+                flush_interval=5,
+                queue_size=100000,
+                record_format=False)
+
+            # Create the custom logger
+            splunk_logger = logging.getLogger("SplunkLogger")
+            splunk_logger.setLevel(logging.INFO)
+            splunk_logger.addHandler(splunk_handler)
+
+            # Create empty array for addition of the log message
+            messages = []
+            for msg in decrypted_file.splitlines():
+                if msg != '':
+                    messages.append(msg)
+            self.logger.info("Number of messages added: {}".format(len(messages)))
+
+            while len(messages) > 0:
+                logging.getLogger("console").debug("Number of messages to send: {}".format(len(messages)))
+                for i, msg in enumerate(messages):
+                    try:
+                        splunk_logger.info(msg, extra={"_time": int(str.split(msg, "start=")[1].split(" ")[0])})
+                        messages.pop(i)
+                    except OSError as e:
+                        self.logger.error(e)
+                        time.sleep(5)
+                self.logger.debug("Queue size = {}".format(len(splunk_handler.queue)))
+                splunk_handler.force_flush()
+                while len(splunk_handler.queue) > 0:
+                    self.logger.info("Waiting for queue purge.")
+                    sleep(1000)
+                self.logger.debug("Final Queue size = {}".format(len(splunk_handler.queue)))
 
         if self.config.SAVE_LOCALLY == "YES":
             local_file = open(self.config.PROCESS_DIR + filename, "a+")
@@ -659,7 +709,17 @@ class Config:
             config.USE_CUSTOM_CA_FILE = os.environ.get('IMPERVA_USE_CUSTOM_CA_FILE',
                 config_parser.get('SETTINGS', 'USE_CUSTOM_CA_FILE'))
             config.CUSTOM_CA_FILE = os.environ.get('IMPERVA_CUSTOM_CA_FILE',
-                config_parser.get('SETTINGS', 'CUSTOM_CA_FILE'))
+                config_parser.get('SETTINGS', 'SPLUNK_HEC'))
+            config.SPLUNK_HEC = os.environ.get('IMPERVA_SPLUNK_HEC',
+                config_parser.get('SETTINGS', 'SPLUNK_HEC'))
+            config.SPLUNK_HEC_IP = os.environ.get('IMPERVA_SPLUNK_HEC_IP',
+                config_parser.get('SETTINGS', 'SPLUNK_HEC_IP'))
+            config.SPLUNK_HEC_PORT = os.environ.get('IMPERVA_SPLUNK_HEC_PORT',
+                config_parser.get('SETTINGS', 'SPLUNK_HEC_PORT'))
+            config.SPLUNK_HEC_TOKEN = os.environ.get('IMPERVA_SPLUNK_HEC_TOKEN',
+                config_parser.get('SETTINGS', 'SPLUNK_HEC_TOKEN'))
+            config.SPLUNK_HEC_INDEX = os.environ.get('IMPERVA_SPLUNK_HEC_INDEX',
+                config_parser.get('SETTINGS', 'SPLUNK_HEC_INDEX'))
             return config
         else:
             self.logger.error("Could Not find configuration file %s", config_file)
