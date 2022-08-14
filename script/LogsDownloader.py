@@ -38,6 +38,7 @@ import base64
 import getopt
 import hashlib
 import logging
+from logging import handlers
 import os
 import platform
 import re
