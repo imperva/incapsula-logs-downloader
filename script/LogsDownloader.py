@@ -38,6 +38,7 @@ import base64
 import getopt
 import hashlib
 import logging
+from logging import handlers
 import os
 import platform
 import re
@@ -646,14 +647,21 @@ class SyslogClient:
         sock = socket.socket(socket.AF_INET, self.socket_type)
         sock.connect((self.host, int(self.port)))
         priority = "<{}>".format(LEVEL['info'] + FACILITY['daemon'] * 8)
-        if message.startswith("CEF") or message.startswith("LEEF"):
+        if message.startswith("CEF"):
             epoch = int(str(message.split("start=")[1]).split(" ")[0]) / 1000
+            timestamp = datetime.datetime.fromtimestamp(int(epoch)).strftime("%b %d %H:%M:%S") or \
+                        datetime.datetime.now().strftime("%b %d %H:%M:%S")
+        elif message.startswith("LEEF"):
+            epoch = int(str(message.split("start=")[1]).split("\t")[0]) / 1000
             timestamp = datetime.datetime.fromtimestamp(int(epoch)).strftime("%b %d %H:%M:%S") or \
                         datetime.datetime.now().strftime("%b %d %H:%M:%S")
         else:
             timestamp = datetime.datetime.now().strftime("%b %d %H:%M:%S")
-        if message.startswith("CEF") or message.startswith("LEEF"):
+
+        if message.startswith("CEF"):
             hostname = str(message.split("sourceServiceName=")[1]).split(" ")[0] or "imperva.com"
+        elif message.startswith("LEEF"):
+            hostname = str(message.split("sourceServiceName=")[1]).split("\t")[0] or "imperva.com"
         else:
             hostname = "imperva.com"
         application = "cwaf"
