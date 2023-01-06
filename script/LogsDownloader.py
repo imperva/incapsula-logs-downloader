@@ -236,7 +236,7 @@ class LogsDownloader:
                         decrypted_file = self.decrypt_file(result[1], logfile)
                         # handle the decrypted content
                         self.handle_log_decrypted_content(logfile, decrypted_file)
-                        self.logger.info("File %s download and processing completed successfully", logfile)
+                        self.logger.info("File %s download completed successfully", logfile)
                         return True
                     # if an exception occurs during the decryption or handling the decrypted content,
                     # we save the raw file to a "fail" folder
@@ -272,8 +272,12 @@ class LogsDownloader:
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
         if self.config.SAVE_LOCALLY == "YES":
-            local_file = open(self.config.PROCESS_DIR + filename, "a+")
-            local_file.writelines(decrypted_file)
+            if not os.path.exists(os.path.join(self.config.PROCESS_DIR, filename)):
+                with open(os.path.join(self.config.PROCESS_DIR, filename), "w") as local_file:
+                    local_file.writelines(decrypted_file)
+                    self.logger.info("File %s saved successfully", filename)
+            else:
+                self.logger.warning("{} already exist in {}".format(filename, self.config.PROCESS_DIR))
 
     """
     Decrypt a file content

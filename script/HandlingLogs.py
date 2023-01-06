@@ -54,11 +54,21 @@ class HandlingLogs:
             for number, line in enumerate(messages):
                 if self.remote_logger is not None:
                     try:
-                        if self.remote_logger.send(line) is not None:
+                        if self.remote_logger.send(line):
                             fp.write(line)
                     except OSError as e:
+                        retries = 1
                         self.logger.error("Sending line number {} from file {}.".format(number, file, e))
-                        time.sleep(5)
+                        while True:
+                            try:
+                                if self.remote_logger.send(line):
+                                    break
+                            except OSError:
+                                self.logger.warning("Unable to send line number {} from file {} after {} retries."
+                                                    .format(number, file, retries))
+                                retries += 1
+                                time.sleep(5)
+
 
     def set_signal_handling(self, sig, frame):
         if sig == signal.SIGTERM:

@@ -28,56 +28,52 @@ class SyslogClient:
         self.port = port
         self.socket_type = socket.SOCK_STREAM if socket_type == "TCP" else socket.SOCK_DGRAM
         self.logger = logger
+        self.logger.debug("Send to Host={} on Port={}".format(self.host, self.port))
 
     def send(self, message):
         """
         Send syslog packet to given host and port.
         """
-        logging.debug("Send to Host={} on Port={}".format(self.host, self.port))
+
         sock = socket.socket(socket.AF_INET, self.socket_type)
-        sock.connect((self.host, int(self.port)))
         priority = "<{}>".format(LEVEL['info'] + FACILITY['daemon'] * 8)
-
-        try:
-            timestamp = self.get_time(message)
-        except ValueError:
-            self.logger.error("Error converting epoch time.")
-            timestamp = datetime.datetime.now().strftime("%b %d %H:%M:%S")
-
-        try:
-            hostname = self.get_hostname(message)
-        except ValueError:
-            self.logger.error("Error getting hostname.")
-            hostname = "imperva.com"
-
+        timestamp = self.get_time(message)
+        hostname = self.get_hostname(message)
         application = "cwaf"
         data = "{} {} {} {} {}".format(priority, timestamp, hostname, application, message)
+
         try:
+            sock.connect((self.host, int(self.port)))
             sock.send(bytes(data, 'utf-8'))
-            return "OK"
+            return True
         except OSError as e:
-            self.logger.error(e)
             sock.close()
-            return None
+            raise e
         finally:
             sock.close()
 
-    @staticmethod
-    def get_time(message):
-        if message.startswith("CEF"):
-            epoch = int(str(message.split("start=")[1]).split(" ")[0]) / 1000
-            timestamp = datetime.datetime.fromtimestamp(int(epoch)).strftime("%b %d %H:%M:%S") or \
-                        datetime.datetime.now().strftime("%b %d %H:%M:%S")
-        elif message.startswith("LEEF"):
-            epoch = int(str(message.split("start=")[1]).split("\t")[0]) / 1000
-            timestamp = datetime.datetime.fromtimestamp(int(epoch)).strftime("%b %d %H:%M:%S") or \
-                        datetime.datetime.now().strftime("%b %d %H:%M:%S")
+    def get_time(self, message):
+        timestamp = datetime.datetime.now().strftime("%b %d %H:%M:%S")
+        try:
+            if message.startswith("CEF"):
+                epoch = int(str(message.split("start=")[1]).split(" ")[0]) / 1000
+                timestamp = datetime.datetime.fromtimestamp(int(epoch)).strftime("%b %d %H:%M:%S") or \
+                            datetime.datetime.now().strftime("%b %d %H:%M:%S")
+            elif message.startswith("LEEF"):
+                epoch = int(str(message.split("start=")[1]).split("\t")[0]) / 1000
+                timestamp = datetime.datetime.fromtimestamp(int(epoch)).strftime("%b %d %H:%M:%S") or \
+                            datetime.datetime.now().strftime("%b %d %H:%M:%S")
+        except IndexError:
+            self.logger.error("Error converting epoch time.")
         return timestamp
 
-    @staticmethod
-    def get_hostname(message):
-        if message.startswith("CEF"):
-            hostname = str(message.split("sourceServiceName=")[1]).split(" ")[0] or "imperva.com"
-        elif message.startswith("LEEF"):
-            hostname = str(message.split("sourceServiceName=")[1]).split("\t")[0] or "imperva.com"
+    def get_hostname(self, message):
+        hostname = "imperva.com"
+        try:
+            if message.startswith("CEF"):
+                hostname = str(message.split("sourceServiceName=")[1]).split(" ")[0] or "imperva.com"
+            elif message.startswith("LEEF"):
+                hostname = str(message.split("sourceServiceName=")[1]).split("\t")[0] or "imperva.com"
+        except IndexError:
+            self.logger.error("Error getting hostname.")
         return hostname

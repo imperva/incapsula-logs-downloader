@@ -1,6 +1,7 @@
 import urllib3
 from urllib3 import exceptions
 
+
 class HttpClient:
     def __init__(self, config, logger):
         self.config = config
@@ -17,11 +18,12 @@ class HttpClient:
         self.http = urllib3.PoolManager()
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+        self.logger.debug("Send to SPLUNK Host={} on Port={} \n URL: {}".format(self.url, self.port, self.full_url))
+
     def send(self, message):
         try:
             r = self.http.request('POST', self.full_url, body=message,
                                   headers={'Content-Type': 'application/json', 'Authorization': 'Splunk ' + self.token})
-            return "OK" if 299 > r.status > 199 else None
+            return True if 299 > r.status > 199 else None
         except exceptions.HTTPError as e:
-            self.logger.error(e)
-            return None
+            raise e
