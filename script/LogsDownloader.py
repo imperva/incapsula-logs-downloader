@@ -44,9 +44,6 @@ import time
 import traceback
 import zlib
 import logging
-# import M2Crypto
-# from Cryptodome.Cipher import AES
-
 from Config import Config
 from FileDownloader import FileDownloader
 from HandlingLogs import HandlingLogs
@@ -244,15 +241,14 @@ class LogsDownloader:
                     # if an exception occurs during the decryption or handling the decrypted content,
                     # we save the raw file to a "fail" folder
                     except Exception as e:
-                        self.logger.info("Saving file %s locally to the 'fail' folder %s %s", logfile, e,
-                                         traceback.format_exc())
-                        fail_dir = os.path.join(self.config.PROCESS_DIR, 'fail')
-                        if not os.path.exists(fail_dir):
-                            os.mkdir(fail_dir)
-                        with open(os.path.join(fail_dir, logfile), "w") as file:
-                            file.write(result[1])
-                        self.logger.info("Saved file %s locally to the 'fail' folder", logfile)
-                        break
+                        self.logger.error("Saving file %s locally: %s %s", logfile, e, traceback.format_exc())
+                        # fail_dir = os.path.join(self.config.PROCESS_DIR, 'fail')
+                        # if not os.path.exists(fail_dir):
+                        #     os.mkdir(fail_dir)
+                        # with open(os.path.join(fail_dir, logfile), "w") as file:
+                        #     file.write(result[1])
+                        # self.logger.info("Saved file %s locally to the 'fail' folder", logfile)
+                        # break
                 # if the file is not found (could be that it is not generated yet)
                 elif result[0] == "NOT_FOUND" or result[0] == "ERROR":
                     # we increase the retry counter
@@ -301,42 +297,44 @@ class LogsDownloader:
                 uncompressed_and_decrypted_file_content = file_log_content
 
         # if the file is encrypted
-        # else:
-        #     content_encrypted_sym_key = file_header_content.split("key:")[1].splitlines()[0]
-        #     # we expect to have a 'keys' folder that will have the stored private keys
-        #     self.logger.warning('Keys Dir: %s', os.path.join(self.config_path, "keys"))
-        #     if not os.path.exists(os.path.join(self.config_path, "keys")):
-        #         self.logger.error("No encryption keys directory was found and file %s is encrypted", filename)
-        #         raise Exception("No encryption keys directory was found")
-        #     # get the public key id from the log file header
-        #     public_key_id = file_header_content.split("publicKeyId:")[1].splitlines()[0]
-        #     # get the public key directory in the filesystem - each time we upload a new key this id is incremented
-        #     public_key_directory = os.path.join(os.path.join(self.config_path, "keys"), public_key_id)
-        #     # if the key directory does not exists
-        #     if not os.path.exists(public_key_directory):
-        #         self.logger.error("Failed to find a proper certificate for : %s who has the publicKeyId of %s",
-        #             filename, public_key_id)
-        #         raise Exception("Failed to find a proper certificate")
-        #     # get the checksum
-        #     checksum = file_header_content.split("checksum:")[1].splitlines()[0]
-        #     # get the private key
-        #     private_key = bytes(open(os.path.join(public_key_directory, "Private.key"), "r").read(), 'utf-8')
-        #     try:
-        #         rsa_private_key = M2Crypto.RSA.load_key_string(private_key)
-        #         content_decrypted_sym_key = rsa_private_key.private_decrypt(
-        #             base64.b64decode(bytes(content_encrypted_sym_key, 'utf-8')), M2Crypto.RSA.pkcs1_padding)
-        #         uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(
-        #             AES.new(base64.b64decode(bytearray(content_decrypted_sym_key)), AES.MODE_CBC, 16 * "\x00").decrypt(
-        #                 file_log_content))
-        #         # we check the content validity by checking the checksum
-        #         content_is_valid = self.validate_checksum(checksum, uncompressed_and_decrypted_file_content)
-        #         if not content_is_valid:
-        #             self.logger.error("Checksum verification failed for file %s", filename)
-        #             raise Exception("Checksum verification failed")
-        #     except Exception as e:
-        #         self.logger.error("Error while trying to decrypt the file %s: %s", filename, e)
-        #         raise Exception("Error while trying to decrypt the file" + filename)
-            return uncompressed_and_decrypted_file_content
+        else:
+            content_encrypted_sym_key = file_header_content.split("key:")[1].splitlines()[0]
+            # we expect to have a 'keys' folder that will have the stored private keys
+            self.logger.warning('Keys Dir: %s', os.path.join(self.config_path, "keys"))
+            if not os.path.exists(os.path.join(self.config_path, "keys")):
+                self.logger.error("No encryption keys directory was found and file %s is encrypted", filename)
+                raise Exception("No encryption keys directory was found")
+            # get the public key id from the log file header
+            public_key_id = file_header_content.split("publicKeyId:")[1].splitlines()[0]
+            # get the public key directory in the filesystem - each time we upload a new key this id is incremented
+            public_key_directory = os.path.join(os.path.join(self.config_path, "keys"), public_key_id)
+            # if the key directory does not exists
+            if not os.path.exists(public_key_directory):
+                self.logger.error("Failed to find a proper certificate for : %s who has the publicKeyId of %s",
+                                  filename, public_key_id)
+                raise Exception("Failed to find a proper certificate")
+            # get the checksum
+            checksum = file_header_content.split("checksum:")[1].splitlines()[0]
+            # get the private key
+            private_key = bytes(open(os.path.join(public_key_directory, "Private.key"), "r").read(), 'utf-8')
+            try:
+                import M2Crypto
+                from Cryptodome.Cipher import AES
+                rsa_private_key = M2Crypto.RSA.load_key_string(private_key)
+                content_decrypted_sym_key = rsa_private_key.private_decrypt(
+                    base64.b64decode(bytes(content_encrypted_sym_key, 'utf-8')), M2Crypto.RSA.pkcs1_padding)
+                uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(
+                    AES.new(base64.b64decode(bytearray(content_decrypted_sym_key)), AES.MODE_CBC, 16 * "\x00").decrypt(
+                        file_log_content))
+                # we check the content validity by checking the checksum
+                content_is_valid = self.validate_checksum(checksum, uncompressed_and_decrypted_file_content)
+                if not content_is_valid:
+                    self.logger.error("Checksum verification failed for file %s", filename)
+                    raise Exception("Checksum verification failed")
+            except Exception as e:
+                self.logger.error("Error while trying to decrypt the file %s: %s", filename, e)
+                raise Exception("Error while trying to decrypt the file" + filename)
+        return uncompressed_and_decrypted_file_content
 
     """
     Downloads a log file

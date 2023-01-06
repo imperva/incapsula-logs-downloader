@@ -25,19 +25,21 @@ class HandlingLogs:
             self.remote_logger = HttpClient(self.config, self.logger)
 
     def watch_files(self):
+        time.sleep(5)
         while self.running:
             try:
                 files = os.listdir(self.config.PROCESS_DIR)
                 if len(files) > 0:
                     for file in files:
-                        self.send_file(os.path.join(self.config.PROCESS_DIR, file))
-                        self.logger.info("Sent all messages, deleting {}".format(os.path.join(self.config.PROCESS_DIR, file)))
-                        os.remove(os.path.join(self.config.PROCESS_DIR, file))
+                        if os.path.isfile(os.path.join(self.config.PROCESS_DIR, file)):
+                            self.send_file(os.path.join(self.config.PROCESS_DIR, file))
+                            self.logger.info("Sent all messages, deleting {}"
+                                             .format(os.path.join(self.config.PROCESS_DIR, file)))
+                            os.remove(os.path.join(self.config.PROCESS_DIR, file))
                 else:
                     time.sleep(3)
             except OSError as e:
                 self.logger.error("Handling content for {}: {}".format(self.config.PROCESS_DIR, e))
-
 
     def send_file(self, file):
         with open(file, "r") as fp:
