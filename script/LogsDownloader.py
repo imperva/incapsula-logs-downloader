@@ -32,46 +32,27 @@
 # ************************************************************************************
 #
 
-
-import configparser
 import base64
 import getopt
 import hashlib
-import logging
 from logging import handlers
 import os
-import platform
-import re
 import signal
 import sys
 import threading
 import time
 import traceback
-import ssl
-import urllib3
 import zlib
-from splunk_handler import SplunkHandler
 import logging
-from logging import handlers
+# import M2Crypto
+# from Cryptodome.Cipher import AES
 
-import M2Crypto
-from Cryptodome.Cipher import AES
+from Config import Config
+from FileDownloader import FileDownloader
+from HandlingLogs import HandlingLogs
+from LastFileId import LastFileId
+from LogsFileIndex import LogsFileIndex
 
-import datetime
-import socket
-
-FACILITY = {
-    'kern': 0, 'user': 1, 'mail': 2, 'daemon': 3,
-    'auth': 4, 'syslog': 5, 'lpr': 6, 'news': 7,
-    'uucp': 8, 'cron': 9, 'authpriv': 10, 'ftp': 11,
-    'local0': 16, 'local1': 17, 'local2': 18, 'local3': 19,
-    'local4': 20, 'local5': 21, 'local6': 22, 'local7': 23,
-}
-
-LEVEL = {
-    'emerg': 0, 'alert': 1, 'crit': 2, 'err': 3,
-    'warning': 4, 'notice': 5, 'info': 6, 'debug': 7
-}
 
 """
 Main class for downloading log files
@@ -83,9 +64,6 @@ class LogsDownloader:
     running = True
 
     def __init__(self, config_path, system_log_path, log_level):
-        # Add by Maytee Sittipornchaisakul
-        # set default output syslog
-        self.setOutputSyslogHandler = False
         # set a log file for the downloader
         self.logger = logging.getLogger("logsDownloader")
         # default log directory for the downloader
@@ -95,7 +73,7 @@ class LogsDownloader:
             os.makedirs(log_dir)
         # keep logs history for 7 days
         file_handler = logging.handlers.TimedRotatingFileHandler(os.path.join(log_dir, "logs_downloader.log"),
-            when='midnight', backupCount=7)
+                                                                 when='midnight', backupCount=7)
         formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
@@ -127,6 +105,13 @@ class LogsDownloader:
         if self.config.SAVE_LOCALLY == "YES":
             if not os.path.exists(self.config.PROCESS_DIR):
                 os.makedirs(self.config.PROCESS_DIR)
+            if self.config.SYSLOG_ENABLE == 'YES' or self.config.SYSLOG_ENABLE == 'YES':
+                self.file_watcher = HandlingLogs(self.config, self.logger)
+                self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
+                self.file_watcher_thread.setDaemon(True)
+                self.file_watcher_thread.setName("File Watcher")
+                self.file_watcher_thread.start()
+                signal.signal(signal.SIGTERM, self.file_watcher.set_signal_handling)
         self.logger.info("LogsDownloader initializing is done")
 
     """
@@ -153,9 +138,9 @@ class LogsDownloader:
                     self.logger.error(
                         "Failed to downloading index file and starting to download all the log files in it - %s, %s", e,
                         traceback.format_exc())
-                    # wait for 30 seconds between each iteration
-                    self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
-                    time.sleep(30)
+                    # wait for 5 seconds between each iteration
+                    self.logger.info("Sleeping for 5 seconds before trying to fetch logs again...")
+                    time.sleep(5)
                     continue
             # the is a last downloaded log file id
             else:
@@ -169,7 +154,7 @@ class LogsDownloader:
                     # if we successfully handled the next log file
                     if success:
                         self.logger.debug("Successfully handled file %s, updating the last known downloaded file id",
-                            next_file)
+                                          next_file)
 
                         if self.running:
                             self.logger.info("Sleeping for 2 seconds before fetching the next logs file")
@@ -202,10 +187,10 @@ class LogsDownloader:
                                     self.logger.info(
                                         "Next file still does not exist. Sleeping for 30 seconds and continuing normally")
                                     retries = 0
-                                    time.sleep(30)
+                                    time.sleep(5)
                             else:
                                 # wait for 30 seconds between each iteration
-                                self.logger.info("Sleeping for 30 seconds before trying to fetch logs again...")
+                                self.logger.info("Sleeping for 5 seconds before trying to fetch logs again...")
                                 retries += 1
                                 time.sleep(30)
 
@@ -260,7 +245,7 @@ class LogsDownloader:
                     # we save the raw file to a "fail" folder
                     except Exception as e:
                         self.logger.info("Saving file %s locally to the 'fail' folder %s %s", logfile, e,
-                            traceback.format_exc())
+                                         traceback.format_exc())
                         fail_dir = os.path.join(self.config.PROCESS_DIR, 'fail')
                         if not os.path.exists(fail_dir):
                             os.mkdir(fail_dir)
@@ -276,7 +261,7 @@ class LogsDownloader:
                 if wait_time > 0 and counter <= 3:
                     if self.running:
                         self.logger.info("Sleeping for %s seconds until next file download retry number %s out of 3",
-                            wait_time, counter)
+                                         wait_time, counter)
                         time.sleep(wait_time)
             # if the downloader was stopped
             else:
@@ -290,85 +275,6 @@ class LogsDownloader:
 
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
-
-        if self.config.SYSLOG_ENABLE == 'YES':
-            syslogger = logging.getLogger("syslog")
-            syslogger.setLevel(logging.INFO)
-
-            if self.config.SYSLOG_PROTO == 'TCP':
-                self.logger.info('Syslog enabled, using TCP')
-                syslog = SyslogClient(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "TCP")
-
-            else:
-                self.logger.info('Syslog enabled, using UDP')
-                syslog = SyslogClient(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "UDP")
-
-            # Create empty array for addition of the log message
-            messages = []
-            for msg in decrypted_file.splitlines():
-                if msg != '':
-                    messages.append(msg)
-            self.logger.info("Number of messages added: {}".format(len(messages)))
-
-            while len(messages) > 0:
-                logging.getLogger("console").debug("Number of messages to send: {}".format(len(messages)))
-
-                for i, msg in enumerate(messages):
-                    try:
-                        syslog.send(msg)
-                        messages.pop(i)
-                    except OSError as e:
-                        self.logger.error(e)
-                        time.sleep(5)
-
-        if self.config.SPLUNK_HEC == "YES":
-            logging.debug("Starting splunk logger.")
-            # Instantiate the splunk logger
-            splunk_handler = SplunkHandler(
-                host=self.config.SPLUNK_HEC_IP,
-                port=self.config.SPLUNK_HEC_PORT,
-                token=self.config.SPLUNK_HEC_TOKEN,
-                index=self.config.SPLUNK_HEC_INDEX,
-                sourcetype='imperva_incapsula_cef',
-                debug=False,
-                verify=False,
-                retry_count=5,
-                source='logdownloader',
-                retry_backoff=2.0,
-                allow_overrides=True,
-                timeout=60,
-                flush_interval=5,
-                queue_size=100000,
-                record_format=False)
-
-            # Create the custom logger
-            splunk_logger = logging.getLogger("SplunkLogger")
-            splunk_logger.setLevel(logging.INFO)
-            splunk_logger.addHandler(splunk_handler)
-
-            # Create empty array for addition of the log message
-            messages = []
-            for msg in decrypted_file.splitlines():
-                if msg != '':
-                    messages.append(msg)
-            self.logger.info("Number of messages added: {}".format(len(messages)))
-
-            while len(messages) > 0:
-                logging.getLogger("console").debug("Number of messages to send: {}".format(len(messages)))
-                for i, msg in enumerate(messages):
-                    try:
-                        splunk_logger.info(msg, extra={"_time": int(str.split(msg, "start=")[1].split(" ")[0])})
-                        messages.pop(i)
-                    except OSError as e:
-                        self.logger.error(e)
-                        time.sleep(5)
-                self.logger.debug("Queue size = {}".format(len(splunk_handler.queue)))
-                splunk_handler.force_flush()
-                while len(splunk_handler.queue) > 0:
-                    self.logger.info("Waiting for queue purge.")
-                    sleep(1000)
-                self.logger.debug("Final Queue size = {}".format(len(splunk_handler.queue)))
-
         if self.config.SAVE_LOCALLY == "YES":
             local_file = open(self.config.PROCESS_DIR + filename, "a+")
             local_file.writelines(decrypted_file)
@@ -395,42 +301,42 @@ class LogsDownloader:
                 uncompressed_and_decrypted_file_content = file_log_content
 
         # if the file is encrypted
-        else:
-            content_encrypted_sym_key = file_header_content.split("key:")[1].splitlines()[0]
-            # we expect to have a 'keys' folder that will have the stored private keys
-            self.logger.warning('Keys Dir: %s', os.path.join(self.config_path, "keys"))
-            if not os.path.exists(os.path.join(self.config_path, "keys")):
-                self.logger.error("No encryption keys directory was found and file %s is encrypted", filename)
-                raise Exception("No encryption keys directory was found")
-            # get the public key id from the log file header
-            public_key_id = file_header_content.split("publicKeyId:")[1].splitlines()[0]
-            # get the public key directory in the filesystem - each time we upload a new key this id is incremented
-            public_key_directory = os.path.join(os.path.join(self.config_path, "keys"), public_key_id)
-            # if the key directory does not exists
-            if not os.path.exists(public_key_directory):
-                self.logger.error("Failed to find a proper certificate for : %s who has the publicKeyId of %s",
-                    filename, public_key_id)
-                raise Exception("Failed to find a proper certificate")
-            # get the checksum
-            checksum = file_header_content.split("checksum:")[1].splitlines()[0]
-            # get the private key
-            private_key = bytes(open(os.path.join(public_key_directory, "Private.key"), "r").read(), 'utf-8')
-            try:
-                rsa_private_key = M2Crypto.RSA.load_key_string(private_key)
-                content_decrypted_sym_key = rsa_private_key.private_decrypt(
-                    base64.b64decode(bytes(content_encrypted_sym_key, 'utf-8')), M2Crypto.RSA.pkcs1_padding)
-                uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(
-                    AES.new(base64.b64decode(bytearray(content_decrypted_sym_key)), AES.MODE_CBC, 16 * "\x00").decrypt(
-                        file_log_content))
-                # we check the content validity by checking the checksum
-                content_is_valid = self.validate_checksum(checksum, uncompressed_and_decrypted_file_content)
-                if not content_is_valid:
-                    self.logger.error("Checksum verification failed for file %s", filename)
-                    raise Exception("Checksum verification failed")
-            except Exception as e:
-                self.logger.error("Error while trying to decrypt the file %s: %s", filename, e)
-                raise Exception("Error while trying to decrypt the file" + filename)
-        return uncompressed_and_decrypted_file_content
+        # else:
+        #     content_encrypted_sym_key = file_header_content.split("key:")[1].splitlines()[0]
+        #     # we expect to have a 'keys' folder that will have the stored private keys
+        #     self.logger.warning('Keys Dir: %s', os.path.join(self.config_path, "keys"))
+        #     if not os.path.exists(os.path.join(self.config_path, "keys")):
+        #         self.logger.error("No encryption keys directory was found and file %s is encrypted", filename)
+        #         raise Exception("No encryption keys directory was found")
+        #     # get the public key id from the log file header
+        #     public_key_id = file_header_content.split("publicKeyId:")[1].splitlines()[0]
+        #     # get the public key directory in the filesystem - each time we upload a new key this id is incremented
+        #     public_key_directory = os.path.join(os.path.join(self.config_path, "keys"), public_key_id)
+        #     # if the key directory does not exists
+        #     if not os.path.exists(public_key_directory):
+        #         self.logger.error("Failed to find a proper certificate for : %s who has the publicKeyId of %s",
+        #             filename, public_key_id)
+        #         raise Exception("Failed to find a proper certificate")
+        #     # get the checksum
+        #     checksum = file_header_content.split("checksum:")[1].splitlines()[0]
+        #     # get the private key
+        #     private_key = bytes(open(os.path.join(public_key_directory, "Private.key"), "r").read(), 'utf-8')
+        #     try:
+        #         rsa_private_key = M2Crypto.RSA.load_key_string(private_key)
+        #         content_decrypted_sym_key = rsa_private_key.private_decrypt(
+        #             base64.b64decode(bytes(content_encrypted_sym_key, 'utf-8')), M2Crypto.RSA.pkcs1_padding)
+        #         uncompressed_and_decrypted_file_content = zlib.decompressobj().decompress(
+        #             AES.new(base64.b64decode(bytearray(content_decrypted_sym_key)), AES.MODE_CBC, 16 * "\x00").decrypt(
+        #                 file_log_content))
+        #         # we check the content validity by checking the checksum
+        #         content_is_valid = self.validate_checksum(checksum, uncompressed_and_decrypted_file_content)
+        #         if not content_is_valid:
+        #             self.logger.error("Checksum verification failed for file %s", filename)
+        #             raise Exception("Checksum verification failed")
+        #     except Exception as e:
+        #         self.logger.error("Error while trying to decrypt the file %s: %s", filename, e)
+        #         raise Exception("Error while trying to decrypt the file" + filename)
+            return uncompressed_and_decrypted_file_content
 
     """
     Downloads a log file
@@ -483,331 +389,6 @@ class LogsDownloader:
         return int(curr_log_file_name_arr[1].rstrip(".log"))
 
 
-"""
-****************************************************************
-                        Helper Classes
-****************************************************************
-"""
-
-"""
-
-LastFileId - A class for managing the last known successfully downloaded log file
-
-"""
-
-
-class LastFileId:
-
-    def __init__(self, config_path):
-        self.config_path = config_path
-
-    """
-    Gets the last known successfully downloaded log file id
-    """
-
-    def get_last_log_id(self):
-        # gets the LastKnownDownloadedFileId file
-        index_file_path = os.path.join(self.config_path, "LastKnownDownloadedFileId.txt")
-
-        # if the file exists - get the log file id from it
-
-        if os.path.exists(index_file_path):
-            with open(index_file_path, "r+") as index_file:
-                return index_file.read()
-        # return an empty string if no file exists
-        return ''
-
-    """
-    Update the last known successfully downloaded log file id
-    """
-
-    def update_last_log_id(self, last_id):
-        # gets the LastKnownDownloadedFileId file
-        index_file_path = os.path.join(self.config_path, "LastKnownDownloadedFileId.txt")
-        with open(index_file_path, "w") as index_file:
-            # update the id
-            index_file.write(last_id)
-            index_file.close()
-
-    """
-    Remove the LastKnownDownloadedFileId.txt file. Used to skip missing files.
-    """
-
-    def remove_last_log_id(self):
-        index_file_path = os.path.join(self.config_path, "LastKnownDownloadedFileId.txt")
-        if os.path.exists(index_file_path):
-            os.remove(index_file_path)
-
-    """
-    Gets the next log file name that we should download
-    """
-
-    def get_next_file_name(self, skip_files=0):
-        # get the current stored last known successfully downloaded log file
-        curr_log_file_name_arr = self.get_last_log_id().split("_")
-        # get the current id
-        curr_log_file_id = int(curr_log_file_name_arr[1].rstrip(".log")) + 1 + skip_files
-        # build the next log file name
-        new_log_file_id = curr_log_file_name_arr[0] + "_" + str(curr_log_file_id) + ".log"
-        return new_log_file_id
-
-    """
-    Increment the last known successfully downloaded log file id
-    """
-
-    def move_to_next_file(self):
-        self.update_last_log_id(self.get_next_file_name())
-
-
-"""
-
-LogsFileIndex - A class for managing the logs files index file
-
-"""
-
-
-class LogsFileIndex:
-
-    def __init__(self, config, logger, downloader):
-        self.config = config
-        self.content = None
-        self.hash_content = None
-        self.logger = logger
-        self.file_downloader = downloader
-
-    """
-    Gets the indexed log files
-    """
-
-    def indexed_logs(self):
-        return self.content
-
-    """
-    Downloads a logs file index file
-    """
-
-    def download(self):
-        self.logger.info("Downloading logs index file...")
-        # try to get the logs.index file
-        file_content = self.file_downloader.request_file_content(self.config.BASE_URL + "logs.index")
-        # if we got the file content
-        if file_content != "":
-            content = file_content.decode("utf-8")
-            # validate the file format
-            if LogsFileIndex.validate_logs_index_file_format(content):
-                self.content = content.splitlines()
-                self.hash_content = set(self.content)
-            else:
-                self.logger.error("log.index, Pattern Validation Failed")
-                raise Exception
-        else:
-            raise Exception('Index file does not yet exist, please allow time for files to be generated.')
-
-    """
-    Validates that format name of the logs files inside the logs index file
-    """
-
-    @staticmethod
-    def validate_logs_index_file_format(content):
-        file_rex = re.compile("(\d+_\d+\.log\n)+")
-        if file_rex.match(content):
-            return True
-        return False
-
-    """
-    Validates a log file name format
-    """
-
-    @staticmethod
-    def validate_log_file_format(content):
-        file_rex = re.compile("(\d+_\d+\.log)")
-        if file_rex.match(content):
-            return True
-        return False
-
-
-"""
-
-Syslog - For sending TCP Syslog messages via socket class
-
-"""
-
-
-class SyslogClient:
-    def __init__(self, host, port, socket_type):
-        self.host = host
-        self.port = port
-        self.socket_type = socket.SOCK_STREAM if socket_type == "TCP" else socket.SOCK_DGRAM
-
-    def send(self, message):
-        """
-        Send syslog packet to given host and port.
-        """
-        logging.debug("Send to Host={} on Port={}".format(self.host, self.port))
-        sock = socket.socket(socket.AF_INET, self.socket_type)
-        sock.connect((self.host, int(self.port)))
-        priority = "<{}>".format(LEVEL['info'] + FACILITY['daemon'] * 8)
-        if message.startswith("CEF"):
-            epoch = int(str(message.split("start=")[1]).split(" ")[0]) / 1000
-            timestamp = datetime.datetime.fromtimestamp(int(epoch)).strftime("%b %d %H:%M:%S") or \
-                        datetime.datetime.now().strftime("%b %d %H:%M:%S")
-        elif message.startswith("LEEF"):
-            epoch = int(str(message.split("start=")[1]).split("\t")[0]) / 1000
-            timestamp = datetime.datetime.fromtimestamp(int(epoch)).strftime("%b %d %H:%M:%S") or \
-                        datetime.datetime.now().strftime("%b %d %H:%M:%S")
-        else:
-            timestamp = datetime.datetime.now().strftime("%b %d %H:%M:%S")
-
-        if message.startswith("CEF"):
-            hostname = str(message.split("sourceServiceName=")[1]).split(" ")[0] or "imperva.com"
-        elif message.startswith("LEEF"):
-            hostname = str(message.split("sourceServiceName=")[1]).split("\t")[0] or "imperva.com"
-        else:
-            hostname = "imperva.com"
-        application = "cwaf"
-        data = "{} {} {} {} {}".format(priority, timestamp, hostname, application, message)
-        try:
-            sock.send(bytes(data, 'utf-8'))
-        except OSError as e:
-            raise e
-        finally:
-            sock.close()
-
-
-"""
-
-Config - A class for reading the configuration file
-
-"""
-
-
-class Config:
-
-    def __init__(self, config_path, logger):
-        self.config_path = config_path
-        self.logger = logger
-
-    """
-    Reads the configuration file
-    """
-
-    def read(self):
-        config_file = os.path.join(self.config_path, "Settings.Config")
-        if os.path.exists(config_file):
-            config_parser = configparser.ConfigParser()
-            config_parser.read(config_file)
-            config = Config(self.config_path, self.logger)
-
-            # Check for environment variables first, then load config values. Backwards compatibility with non-docker deployments
-            config.API_ID = os.environ.get('IMPERVA_API_ID', config_parser.get("SETTINGS", "APIID"))
-            config.API_KEY = os.environ.get('IMPERVA_API_KEY', config_parser.get("SETTINGS", "APIKEY"))
-            config.PROCESS_DIR = os.environ.get('IMPERVA_LOG_DIRECTORY',
-                os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), ""))
-            config.BASE_URL = os.environ.get('IMPERVA_API_URL',
-                os.path.join(config_parser.get("SETTINGS", "BASEURL"), ""))
-            config.SAVE_LOCALLY = os.environ.get('IMPERVA_SAVE_LOCALLY', config_parser.get("SETTINGS", "SAVE_LOCALLY"))
-            config.USE_PROXY = os.environ.get('IMPERVA_USE_PROXY', config_parser.get("SETTINGS", "USEPROXY"))
-            config.PROXY_SERVER = os.environ.get('IMPERVA_PROXY_SERVER', config_parser.get("SETTINGS", "PROXYSERVER"))
-            config.SYSLOG_ENABLE = os.environ.get('IMPERVA_SYSLOG_ENABLE',
-                config_parser.get('SETTINGS', 'SYSLOG_ENABLE'))
-            config.SYSLOG_ADDRESS = os.environ.get('IMPERVA_SYSLOG_ADDRESS',
-                config_parser.get('SETTINGS', 'SYSLOG_ADDRESS'))
-            config.SYSLOG_PORT = os.environ.get('IMPERVA_SYSLOG_PORT', config_parser.get('SETTINGS', 'SYSLOG_PORT'))
-            config.SYSLOG_PROTO = os.environ.get('IMPERVA_SYSLOG_PROTO', config_parser.get('SETTINGS', 'SYSLOG_PROTO'))
-            config.USE_CUSTOM_CA_FILE = os.environ.get('IMPERVA_USE_CUSTOM_CA_FILE',
-                config_parser.get('SETTINGS', 'USE_CUSTOM_CA_FILE'))
-            config.CUSTOM_CA_FILE = os.environ.get('IMPERVA_CUSTOM_CA_FILE',
-                config_parser.get('SETTINGS', 'SPLUNK_HEC'))
-            config.SPLUNK_HEC = os.environ.get('IMPERVA_SPLUNK_HEC',
-                config_parser.get('SETTINGS', 'SPLUNK_HEC'))
-            config.SPLUNK_HEC_IP = os.environ.get('IMPERVA_SPLUNK_HEC_IP',
-                config_parser.get('SETTINGS', 'SPLUNK_HEC_IP'))
-            config.SPLUNK_HEC_PORT = os.environ.get('IMPERVA_SPLUNK_HEC_PORT',
-                config_parser.get('SETTINGS', 'SPLUNK_HEC_PORT'))
-            config.SPLUNK_HEC_TOKEN = os.environ.get('IMPERVA_SPLUNK_HEC_TOKEN',
-                config_parser.get('SETTINGS', 'SPLUNK_HEC_TOKEN'))
-            config.SPLUNK_HEC_INDEX = os.environ.get('IMPERVA_SPLUNK_HEC_INDEX',
-                config_parser.get('SETTINGS', 'SPLUNK_HEC_INDEX'))
-            return config
-        else:
-            self.logger.error("Could Not find configuration file %s", config_file)
-            raise Exception("Could Not find configuration file")
-
-
-"""
-
-FileDownloader - A class for downloading files
-
-"""
-
-
-class FileDownloader:
-
-    def __init__(self, config, logger):
-        self.config = config
-        self.logger = logger
-
-    """
-    A method for getting a destination URL file content
-    """
-
-    def request_file_content(self, url, timeout=20):
-        # default value
-        response_content = ""
-
-        # https://github.com/imperva/incapsula-logs-downloader/pull/7
-        if self.config.USE_PROXY == "YES" and self.config.USE_CUSTOM_CA_FILE == "YES":
-            self.logger.info("Using proxy %s" % self.config.PROXY_SERVER)
-            https = urllib3.ProxyManager(self.config.PROXY_SERVER, ca_certs=self.config.CUSTOM_CA_FILE,
-                cert_reqs='CERT_REQUIRED', timeout=timeout)
-        elif self.config.USE_PROXY == "YES" and self.config.USE_CUSTOM_CA_FILE == "NO":
-            self.logger.info("Using proxy %s" % self.config.PROXY_SERVER)
-            https = urllib3.ProxyManager(self.config.PROXY_SERVER, cert_reqs='CERT_REQUIRED', timeout=timeout)
-        elif self.config.USE_PROXY == "NO" and self.config.USE_CUSTOM_CA_FILE == "YES":
-            https = urllib3.PoolManager(ca_certs=self.config.CUSTOM_CA_FILE, cert_reqs='CERT_REQUIRED', timeout=timeout)
-        else:  # no proxy and no custom CA file
-            https = urllib3.PoolManager(cert_reqs='CERT_REQUIRED', timeout=timeout)
-
-        try:
-            # Download the file
-            auth_header = urllib3.make_headers(basic_auth='%s:%s' % (self.config.API_ID, self.config.API_KEY))
-            response = https.request('GET', url, headers=auth_header)
-
-            # if we get a 200 OK response
-            if response.status == 200:
-                self.logger.info("Successfully downloaded file from URL %s" % url)
-                # read the response content
-                response_content = response.data
-            # if we get another response code
-            elif response.status == 404:
-                self.logger.warning("Could not find file %s. Response code is %s", url, response.status)
-                return response_content
-            elif response.status == 401:
-                self.logger.error("Authorization error - Failed to download file %s. Response code is %s", url,
-                    response.status)
-                raise Exception("Authorization error")
-            elif response.status == 429:
-                self.logger.error("Rate limit exceeded - Failed to download file %s. Response code is %s", url,
-                    response.status)
-                raise Exception("Rate limit error")
-            else:
-                self.logger.error("Failed to download file %s. Response code is %s. Data is %s", url, response.status,
-                    response.data)
-            # close the response
-            response.close()
-            # return the content string
-            return response_content
-
-        except urllib3.exceptions.HTTPError as e:
-            print('Request failed:', e)
-            self.logger.error("An error has occur while making a open connection to %s. %s", url, str(e.reason))
-            raise Exception("Connection error")
-        # unexpected exception occurred
-        except Exception:
-            self.logger.error("An error has occur while making a open connection to %s. %s", url,
-                traceback.format_exc())
-            raise Exception("Connection error")
-
 if __name__ == "__main__":
     # default paths
     path_to_config_folder = "/etc/incapsula/logs/config"
@@ -840,6 +421,7 @@ if __name__ == "__main__":
     logsDownloader = LogsDownloader(path_to_config_folder, path_to_system_logs_folder, system_logs_level)
     # set a handler for process termination
     signal.signal(signal.SIGTERM, logsDownloader.set_signal_handling)
+
     try:
         # start a dedicated thread that will run the LogsDownloader logs fetching logic
         process_thread = threading.Thread(target=logsDownloader.get_log_files, name="process_thread")
