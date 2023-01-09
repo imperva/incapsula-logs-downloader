@@ -52,8 +52,6 @@ class Config:
                 config_parser.get('SETTINGS', 'SPLUNK_HEC_PORT'))
             config.SPLUNK_HEC_TOKEN = os.environ.get('IMPERVA_SPLUNK_HEC_TOKEN',
                 config_parser.get('SETTINGS', 'SPLUNK_HEC_TOKEN'))
-            config.SPLUNK_HEC_INDEX = os.environ.get('IMPERVA_SPLUNK_HEC_INDEX',
-                config_parser.get('SETTINGS', 'SPLUNK_HEC_INDEX'))
             return config
         else:
             self.logger.error("Could Not find configuration file %s", config_file)

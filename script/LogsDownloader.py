@@ -102,7 +102,7 @@ class LogsDownloader:
         if self.config.SAVE_LOCALLY == "YES":
             if not os.path.exists(self.config.PROCESS_DIR):
                 os.makedirs(self.config.PROCESS_DIR)
-            if self.config.SYSLOG_ENABLE == 'YES' or self.config.SYSLOG_ENABLE == 'YES':
+            if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
                 self.file_watcher = HandlingLogs(self.config, self.logger)
                 self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
                 self.file_watcher_thread.setDaemon(True)
