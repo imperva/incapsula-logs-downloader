@@ -102,13 +102,13 @@ class LogsDownloader:
         if self.config.SAVE_LOCALLY == "YES":
             if not os.path.exists(self.config.PROCESS_DIR):
                 os.makedirs(self.config.PROCESS_DIR)
-            if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
-                self.file_watcher = HandlingLogs(self.config, self.logger)
-                self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
-                self.file_watcher_thread.setDaemon(True)
-                self.file_watcher_thread.setName("File Watcher")
-                self.file_watcher_thread.start()
-                signal.signal(signal.SIGTERM, self.file_watcher.set_signal_handling)
+            # if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
+            self.file_watcher = HandlingLogs(self.config, self.logger)
+            self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
+            self.file_watcher_thread.setDaemon(True)
+            self.file_watcher_thread.setName("File Watcher")
+            self.file_watcher_thread.start()
+            signal.signal(signal.SIGTERM, self.file_watcher.set_signal_handling)
         self.logger.info("LogsDownloader initializing is done")
 
     """
@@ -272,10 +272,11 @@ class LogsDownloader:
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
         if self.config.SAVE_LOCALLY == "YES":
-            if not os.path.exists(os.path.join(self.config.PROCESS_DIR, filename)):
-                with open(os.path.join(self.config.PROCESS_DIR, filename), "w") as local_file:
+            if not os.path.exists(os.path.join(self.config.PROCESS_DIR, filename + ".tmp")):
+                with open(os.path.join(self.config.PROCESS_DIR, filename + ".tmp"), "w") as local_file:
                     local_file.writelines(decrypted_file)
-                    self.logger.info("File %s saved successfully", filename)
+                os.rename(os.path.join(self.config.PROCESS_DIR, filename + ".tmp"), os.path.join(self.config.PROCESS_DIR, filename))
+                self.logger.info("File %s saved successfully", filename)
             else:
                 self.logger.warning("{} already exist in {}".format(filename, self.config.PROCESS_DIR))
 

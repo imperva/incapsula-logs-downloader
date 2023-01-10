@@ -1,5 +1,6 @@
 from SyslogClient import SyslogClient
 from HttpClient import HttpClient
+from DisTrace import DisTrace
 import signal
 import os
 import time
@@ -23,6 +24,8 @@ class HandlingLogs:
         if self.config.SPLUNK_HEC == "YES":
             self.logger.info('Splunk HEC enabled.')
             self.remote_logger = HttpClient(self.config, self.logger)
+        else:
+            self.remote_logger = DisTrace(self.logger)
 
     def watch_files(self):
         time.sleep(5)
@@ -31,11 +34,13 @@ class HandlingLogs:
                 files = os.listdir(self.config.PROCESS_DIR)
                 if len(files) > 0:
                     for file in files:
-                        if os.path.isfile(os.path.join(self.config.PROCESS_DIR, file)):
-                            self.send_file(os.path.join(self.config.PROCESS_DIR, file))
-                            self.logger.info("Sent all messages, deleting {}"
-                                             .format(os.path.join(self.config.PROCESS_DIR, file)))
-                            os.remove(os.path.join(self.config.PROCESS_DIR, file))
+                        if not file.__contains__("tmp"):
+                            if os.path.isfile(os.path.join(self.config.PROCESS_DIR, file)):
+                                self.send_file(os.path.join(self.config.PROCESS_DIR, file))
+                                self.logger.info("Sent all messages, deleting {}"
+                                                 .format(os.path.join(self.config.PROCESS_DIR, file)))
+                                os.remove(os.path.join(self.config.PROCESS_DIR, file))
+                        time.sleep(3)
                 else:
                     time.sleep(3)
             except OSError as e:
@@ -54,8 +59,9 @@ class HandlingLogs:
             for number, line in enumerate(messages):
                 if self.remote_logger is not None:
                     try:
-                        if self.remote_logger.send(line):
-                            fp.write(line)
+                        self.remote_logger.event_handler(line)
+                        # if self.remote_logger.send(line):
+                        fp.write(line)
                     except OSError as e:
                         retries = 1
                         self.logger.error("Sending line number {} from file {}.".format(number, file, e))
