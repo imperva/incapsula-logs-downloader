@@ -1,6 +1,5 @@
 from SyslogClient import SyslogClient
 from HttpClient import HttpClient
-from DisTrace import DisTrace
 import signal
 import os
 import time
@@ -24,8 +23,6 @@ class HandlingLogs:
         if self.config.SPLUNK_HEC == "YES":
             self.logger.info('Splunk HEC enabled.')
             self.remote_logger = HttpClient(self.config, self.logger)
-        else:
-            self.remote_logger = DisTrace(self.logger)
 
     def watch_files(self):
         time.sleep(5)
@@ -59,9 +56,8 @@ class HandlingLogs:
             for number, line in enumerate(messages):
                 if self.remote_logger is not None:
                     try:
-                        self.remote_logger.event_handler(line)
-                        # if self.remote_logger.send(line):
-                        fp.write(line)
+                        if self.remote_logger.send(line):
+                            fp.write(line)
                     except OSError as e:
                         retries = 1
                         self.logger.error("Sending line number {} from file {}.".format(number, file, e))
@@ -74,7 +70,6 @@ class HandlingLogs:
                                                     .format(number, file, retries))
                                 retries += 1
                                 time.sleep(5)
-
 
     def set_signal_handling(self, sig, frame):
         if sig == signal.SIGTERM:
