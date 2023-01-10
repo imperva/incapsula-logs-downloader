@@ -12,7 +12,7 @@ class HttpClient:
         self.token = self.config.SPLUNK_HEC_TOKEN
 
         # Build Full URL out of Parameters
-        self.full_url = "http://" + self.url + ':' + self.port + '/services/collector/raw'
+        self.full_url = self.url + ':' + self.port + '/services/collector/raw'
 
         # Create URLLib3 Pool Manager
         self.http = urllib3.PoolManager()
