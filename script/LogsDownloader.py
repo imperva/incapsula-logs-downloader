@@ -102,14 +102,12 @@ class LogsDownloader:
         if self.config.SAVE_LOCALLY == "YES":
             if not os.path.exists(self.config.PROCESS_DIR):
                 os.makedirs(self.config.PROCESS_DIR)
-            # if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
-            self.file_watcher = HandlingLogs(self.config, self.logger)
-            self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
-            self.file_watcher_thread.setDaemon(True)
-            self.file_watcher_thread.setName("File Watcher")
-            self.file_watcher_thread.start()
-            signal.signal(signal.SIGTERM, self.file_watcher.set_signal_handling)
-        self.logger.info("LogsDownloader initializing is done")
+            if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
+                self.file_watcher = HandlingLogs(self.config, self.logger)
+                self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
+                self.file_watcher_thread.start()
+                signal.signal(signal.SIGTERM, self.file_watcher.set_signal_handling)
+            self.logger.info("LogsDownloader initializing is done")
 
     """
     Download the log files.
@@ -189,7 +187,7 @@ class LogsDownloader:
                                 # wait for 30 seconds between each iteration
                                 self.logger.info("Sleeping for 5 seconds before trying to fetch logs again...")
                                 retries += 1
-                                time.sleep(30)
+                                time.sleep(5)
 
                 except Exception as e:
                     self.logger.error("Failed to download file %s. Error is - %s , %s", next_file, e,
