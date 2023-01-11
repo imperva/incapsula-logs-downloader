@@ -1,4 +1,3 @@
-import logging
 import datetime
 import socket
 
@@ -30,7 +29,7 @@ class SyslogClient:
         self.logger = logger
         self.logger.debug("Send to Host={} on Port={}".format(self.host, self.port))
 
-    def send(self, message):
+    async def send(self, message):
         """
         Send syslog packet to given host and port.
         """
