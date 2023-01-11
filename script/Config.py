@@ -28,7 +28,9 @@ class Config:
             config.API_ID = os.environ.get('IMPERVA_API_ID', config_parser.get("SETTINGS", "APIID"))
             config.API_KEY = os.environ.get('IMPERVA_API_KEY', config_parser.get("SETTINGS", "APIKEY"))
             config.PROCESS_DIR = os.environ.get('IMPERVA_LOG_DIRECTORY',
-                os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), ""))
+                                                os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), ""))
+            config.ARCHIVE_DIR = os.environ.get('IMPERVA_ARCHIVE_DIR',
+                                                os.path.join(config_parser.get('SETTINGS', 'ARCHIVE_DIR'), "") or None)
             config.BASE_URL = os.environ.get('IMPERVA_API_URL',
                 os.path.join(config_parser.get("SETTINGS", "BASEURL"), ""))
             config.SAVE_LOCALLY = os.environ.get('IMPERVA_SAVE_LOCALLY', config_parser.get("SETTINGS", "SAVE_LOCALLY"))

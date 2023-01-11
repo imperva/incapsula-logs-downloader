@@ -29,25 +29,27 @@ class SyslogClient:
         self.logger = logger
         self.logger.debug("Send to Host={} on Port={}".format(self.host, self.port))
 
-    async def send(self, message):
+    def send(self, data):
         """
         Send syslog packet to given host and port.
         """
-
+        messages = ""
         sock = socket.socket(socket.AF_INET, self.socket_type)
         priority = "<{}>".format(LEVEL['info'] + FACILITY['daemon'] * 8)
-        timestamp = self.get_time(message)
-        hostname = self.get_hostname(message)
-        application = "cwaf"
-        data = "{} {} {} {} {}".format(priority, timestamp, hostname, application, message)
 
+        for message in data:
+            timestamp = self.get_time(message)
+            hostname = self.get_hostname(message)
+            application = "cwaf"
+            msg = "{} {} {} {} {}\n".format(priority, timestamp, hostname, application, message)
+            messages += msg
         try:
             sock.connect((self.host, int(self.port)))
-            sock.send(bytes(data, 'utf-8'))
+            sock.send(bytes(messages, 'utf-8'))
             return True
-        except OSError as e:
-            sock.close()
-            raise e
+        except socket.error as e:
+            self.logger.error(e)
+            return None
         finally:
             sock.close()
 

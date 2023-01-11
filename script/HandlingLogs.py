@@ -36,7 +36,7 @@ class HandlingLogs:
                         if os.path.isfile(os.path.join(self.config.PROCESS_DIR, file)):
                             if not file.__contains__("tmp") and self.SEND_GOOD:
                                 _start = time.perf_counter()
-                                asyncio.run(self.send_file(os.path.join(self.config.PROCESS_DIR, file)))
+                                asyncio.run(self.send_file(file))
                                 self.logger.debug(time.perf_counter() - _start)
                     time.sleep(3)
                 else:
@@ -45,28 +45,35 @@ class HandlingLogs:
                 self.logger.error("Handling content for {}: {}".format(self.config.PROCESS_DIR, e))
 
     async def send_file(self, file):
-        with open(file, "r") as fp:
+        original = os.path.join(self.config.PROCESS_DIR, file)
+        with open(original, "r") as fp:
             try:
                 messages = fp.readlines()
                 if len(messages) > 0:
                     self.logger.info("Number of messages added: {}".format(len(messages)))
-
                     if self.remote_logger is not None:
                         if self.remote_logger.send(messages):
-                            self.logger.info("Sent all messages, deleting {}"
-                                             .format(os.path.join(self.config.PROCESS_DIR, file)))
-                            os.remove(os.path.join(self.config.PROCESS_DIR, file))
+                            if self.config.ARCHIVE_DIR is not None:
+                                archived = os.path.join(self.config.ARCHIVE_DIR, file)
+                                self.logger.info("Sent all messages, archiving {} to {}"
+                                                 .format(original, archived))
+                                os.rename(original, archived)
+                            else:
+                                self.logger.info("Sent all messages, deleting {}"
+                                                 .format(original))
+                                os.remove(original)
                         else:
                             self.SEND_GOOD = False
                             self.logger.warning("-----Changing SEND_GOOD to {}--------".format(self.SEND_GOOD))
                             self.logger.warning("Failed to send {} lines from {}."
-                                                .format(len(messages), os.path.join(self.config.PROCESS_DIR, file)))
+                                                .format(len(messages), original))
                             retries = 1
                             while True:
                                 try:
                                     if self.remote_logger.send(messages):
                                         self.SEND_GOOD = True
-                                        self.logger.warning("-----Changing SEND_GOOD to {}--------".format(self.SEND_GOOD))
+                                        self.logger.warning("-----Changing SEND_GOOD to {}--------"
+                                                            .format(self.SEND_GOOD))
                                         break
                                     else:
                                         retries += 1

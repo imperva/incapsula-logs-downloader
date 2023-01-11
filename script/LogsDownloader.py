@@ -108,6 +108,10 @@ class LogsDownloader:
                 self.file_watcher_thread.start()
                 signal.signal(signal.SIGTERM, self.file_watcher.set_signal_handling)
             self.logger.info("LogsDownloader initializing is done")
+        # Create the archive dir for moving the uploaded files to.
+        if self.config.ARCHIVE_DIR is not None:
+            if not os.path.exists(self.config.ARCHIVE_DIR):
+                os.makedirs(self.config.ARCHIVE_DIR)
 
     """
     Download the log files.

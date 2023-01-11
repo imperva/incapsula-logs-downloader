@@ -62,7 +62,7 @@ class HttpClient:
         body = json.dumps(messages)
 
         try:
-            response = self.session.post(url=self.full_url, data=body, timeout=(5, 15),
+            response = self.session.post(url=self.full_url, data=body, timeout=(5, 15), verify=False,
                                          headers={'Content-Type': 'application/json',
                                                   'Authorization': 'Splunk ' + self.token})
             if 299 > response.status_code > 199:
