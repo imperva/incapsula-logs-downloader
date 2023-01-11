@@ -1,8 +1,6 @@
 import json
 import time
-import urllib3
 import requests
-from urllib3 import exceptions
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
@@ -21,13 +19,8 @@ class HttpClient:
         self.source = self.config.SPLUNK_HEC_SOURCE
         self.sourcetype = self.config.SPLUNK_HEC_SOURCETYPE
 
-
         # Build Full URL out of Parameters
         self.full_url = self.url + ':' + self.port + '/services/collector/event'
-
-        # Create URLLib3 Pool Manager
-        self.http = urllib3.PoolManager()
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         self.logger.debug("Send to SPLUNK Host={} on Port={} \n URL: {}".format(self.url, self.port, self.full_url))
 

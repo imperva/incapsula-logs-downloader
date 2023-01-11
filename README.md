@@ -85,7 +85,8 @@ The connector script will look for the following environment variables, and fall
 	IMPERVA_API_KEY (required)  
 	IMPERVA_API_ID (required)  
 	IMPERVA_API_URL (required)  
-	IMPERVA_LOG_DIRECTORY (optional)  
+	IMPERVA_LOG_DIRECTORY (optional) 
+	IMPERVA_ARCHIVE_DIR
 	IMPERVA_SAVE_LOCALLY (optional)  
 	IMPERVA_USE_PROXY (optional)  
 	IMPERVA_PROXY_SERVER (optional)  
@@ -95,6 +96,14 @@ The connector script will look for the following environment variables, and fall
 	IMPERVA_SYSLOG_PROTO (optional)  
 	IMPERVA_USE_CUSTOM_CA_FILE (optional)  
 	IMPERVA_CUSTOM_CA_FILE (optional, see note below)
+	IMPERVA_SPLUNK_HEC (optional)  
+	IMPERVA_SPLUNK_HEC_IP (optional)  
+	IMPERVA_SPLUNK_HEC_PORT (optional)  
+	IMPERVA_SPLUNK_HEC_TOKEN (optional)  
+	IMPERVA_SPLUNK_HEC_SRC_HOSTNAME (optional)  
+	IMPERVA_SPLUNK_HEC_INDEX (optional)  
+	IMPERVA_SPLUNK_HEC_SOURCE (optional)  
+	IMPERVA_SPLUNK_HEC_SOURCETYPE (optional)  
 
 > Note - In order to use a custom CA file, you will need to either build a docker image with the file embedded, or mount a persistent data volume to the image and provide the full path to the file as this variable value.
 

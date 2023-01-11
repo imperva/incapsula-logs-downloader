@@ -6,6 +6,8 @@ import time
 import asyncio
 
 
+# Creating a file watcher that will identify the downloaded logs in the configured
+# directory. This file watch will handle the new file and send to the selected sender.
 class HandlingLogs:
     SEND_GOOD = True
     running = True
@@ -14,6 +16,7 @@ class HandlingLogs:
         self.config = config
         self.logger = logger
 
+        # Confire the selected sender, either SysLog (TCP or UDP) or Splunk HEC.
         if self.config.SYSLOG_PROTO == 'TCP' and self.config.SYSLOG_ENABLE == 'YES':
             self.logger.info('Syslog enabled, using TCP')
             self.remote_logger = SyslogClient(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "TCP", self.logger)
