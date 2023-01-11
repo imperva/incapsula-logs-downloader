@@ -21,6 +21,7 @@ Syslog - For sending TCP Syslog messages via socket class
 """
 
 
+# Create a raw socket client to send messages to syslog server
 class SyslogClient:
     def __init__(self, host, port, socket_type, logger):
         self.host = host
@@ -29,6 +30,7 @@ class SyslogClient:
         self.logger = logger
         self.logger.debug("Send to Host={} on Port={}".format(self.host, self.port))
 
+    # Send the messages
     def send(self, data):
         """
         Send syslog packet to given host and port.
@@ -37,6 +39,7 @@ class SyslogClient:
         sock = socket.socket(socket.AF_INET, self.socket_type)
         priority = "<{}>".format(LEVEL['info'] + FACILITY['daemon'] * 8)
 
+        # Loop over the data/messages array and create the relevant object(s) to be sent.
         for message in data:
             timestamp = self.get_time(message)
             hostname = self.get_hostname(message)
@@ -46,6 +49,7 @@ class SyslogClient:
         try:
             sock.connect((self.host, int(self.port)))
             sock.send(bytes(messages, 'utf-8'))
+            # Returning true if everything is good, if not log the error and return None.
             return True
         except socket.error as e:
             self.logger.error(e)
@@ -53,6 +57,7 @@ class SyslogClient:
         finally:
             sock.close()
 
+    # Function used to get the inbound timestamp to set the indexed time in epoch
     def get_time(self, message):
         timestamp = datetime.datetime.now().strftime("%b %d %H:%M:%S")
         try:
@@ -68,6 +73,7 @@ class SyslogClient:
             self.logger.error("Error converting epoch time.")
         return timestamp
 
+    # Function used to get the host name from the inbound hostname/service name
     def get_hostname(self, message):
         hostname = "imperva.com"
         try:

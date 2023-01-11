@@ -5,6 +5,8 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
 
+# Create an HTTP client to send messages to Splunk HEC
+# TODO ----this is something that can handle multiple types of HTTP post if only to modify the ApiKey and body
 class HttpClient:
     def __init__(self, config, logger):
         self.config = config
@@ -24,6 +26,7 @@ class HttpClient:
 
         self.logger.debug("Send to SPLUNK Host={} on Port={} \n URL: {}".format(self.url, self.port, self.full_url))
 
+        # Creating a retry and backoff strategy for failed sends.
         retry_strategy = Retry(
             total=3,
             status_forcelist=[429],
@@ -34,9 +37,11 @@ class HttpClient:
         self.session = requests.Session()
         self.session.mount("https://", adapter)
 
+    # Send the messages
     def send(self, data):
         messages = []
 
+        # Loop over the data/messages array and create the relevant object(s) to be sent.
         for message in data:
             try:
                 _time = int(str.split(message, "start=")[1].split(" ")[0])
@@ -58,6 +63,7 @@ class HttpClient:
             response = self.session.post(url=self.full_url, data=body, timeout=(5, 15), verify=False,
                                          headers={'Content-Type': 'application/json',
                                                   'Authorization': 'Splunk ' + self.token})
+            # Returning true if everything is good, if not log the error and return None.
             if 299 > response.status_code > 199:
                 return True
             else:
