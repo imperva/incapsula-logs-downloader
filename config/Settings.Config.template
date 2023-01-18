@@ -1,7 +1,6 @@
 [SETTINGS]
 APIID=123456789
 APIKEY=xxxxx-xxxxx-xxxxx-xxxxx
-SAVE_LOCALLY=YES
 PROCESS_DIR=/tmp/processed/
 ARCHIVE_DIR=
 BASEURL=https://logs1.incapsula.com/123456_456789/

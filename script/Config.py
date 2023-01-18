@@ -33,7 +33,6 @@ class Config:
                                                 os.path.join(config_parser.get('SETTINGS', 'ARCHIVE_DIR'), "") or None)
             config.BASE_URL = os.environ.get('IMPERVA_API_URL',
                 os.path.join(config_parser.get("SETTINGS", "BASEURL"), ""))
-            config.SAVE_LOCALLY = os.environ.get('IMPERVA_SAVE_LOCALLY', config_parser.get("SETTINGS", "SAVE_LOCALLY"))
             config.USE_PROXY = os.environ.get('IMPERVA_USE_PROXY', config_parser.get("SETTINGS", "USEPROXY"))
             config.PROXY_SERVER = os.environ.get('IMPERVA_PROXY_SERVER', config_parser.get("SETTINGS", "PROXYSERVER"))
             config.SYSLOG_ENABLE = os.environ.get('IMPERVA_SYSLOG_ENABLE',

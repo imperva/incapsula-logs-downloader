@@ -87,7 +87,6 @@ The connector script will look for the following environment variables, and fall
 	IMPERVA_API_URL (required)  
 	IMPERVA_LOG_DIRECTORY (optional) 
 	IMPERVA_ARCHIVE_DIR
-	IMPERVA_SAVE_LOCALLY (optional)  
 	IMPERVA_USE_PROXY (optional)  
 	IMPERVA_PROXY_SERVER (optional)  
 	IMPERVA_SYSLOG_ENABLE (optional)  

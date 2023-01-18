@@ -10,7 +10,7 @@ import asyncio
 # directory. This file watcher will handle the new file and send to the selected sender.
 class HandlingLogs:
     SEND_GOOD = True
-    running = True
+    RUNNING = True
 
     def __init__(self, config, logger):
         self.config = config
@@ -31,7 +31,7 @@ class HandlingLogs:
 
     def watch_files(self):
         time.sleep(5)
-        while self.running:
+        while self.RUNNING:
             try:
                 # Loop over the configured processing directory
                 files = os.listdir(self.config.PROCESS_DIR)
@@ -103,5 +103,5 @@ class HandlingLogs:
 
     def set_signal_handling(self, sig, frame):
         if sig == signal.SIGTERM:
-            self.running = False
+            self.RUNNING = False
             self.logger.info("Got a termination signal, will now shutdown and exit gracefully")

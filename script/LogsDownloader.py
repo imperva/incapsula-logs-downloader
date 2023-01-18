@@ -92,26 +92,31 @@ class LogsDownloader:
                 "Exception while getting LogsDownloader config file - Could Not find Configuration file - %s",
                 traceback.format_exc())
             sys.exit("Could Not find Configuration file")
+        # Create the processing dir
+        if bool(self.config.PROCESS_DIR):
+            if not os.path.exists(self.config.PROCESS_DIR):
+                os.makedirs(self.config.PROCESS_DIR)
+        else:
+            if not os.path.exists(os.path.join(os.getcwd(), "process")):
+                os.makedirs(os.path.join(os.getcwd(), "process"))
         # create a file downloader handler
         self.file_downloader = FileDownloader(self.config, self.logger)
         # create a last file id handler
         self.last_known_downloaded_file_id = LastFileId(self.config_path)
         # create a logs file index handler
         self.logs_file_index = LogsFileIndex(self.config, self.logger, self.file_downloader)
-        # create log folder if needed for storing downloaded logs
-        if self.config.SAVE_LOCALLY == "YES":
-            if not os.path.exists(self.config.PROCESS_DIR):
-                os.makedirs(self.config.PROCESS_DIR)
-            if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
-                self.file_watcher = HandlingLogs(self.config, self.logger)
-                self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
-                self.file_watcher_thread.start()
-                signal.signal(signal.SIGTERM, self.file_watcher.set_signal_handling)
-            self.logger.info("LogsDownloader initializing is done")
-        # Create the archive dir for moving the uploaded files to.
-        if self.config.ARCHIVE_DIR is not None:
+        # Configure the remote logger, whether it be SYSLOG or Splunk HEC
+        if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
+            self.file_watcher = HandlingLogs(self.config, self.logger)
+            self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
+            self.file_watcher_thread.start()
+            signal.signal(signal.SIGTERM, self.file_watcher.set_signal_handling)
+        self.logger.info("LogsDownloader initializing is done")
+    # Create the archive dir for moving the uploaded files to.
+        if bool(self.config.ARCHIVE_DIR):
             if not os.path.exists(self.config.ARCHIVE_DIR):
                 os.makedirs(self.config.ARCHIVE_DIR)
+
 
     """
     Download the log files.
@@ -119,7 +124,7 @@ class LogsDownloader:
     It this is not the first time, we try to fetch the next log file.
     """
 
-    def get_log_files(self):
+    def get_index_file(self):
         retries = 0
         while self.running:
             # check what is the last log file that we downloaded
@@ -273,14 +278,14 @@ class LogsDownloader:
 
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
-        if self.config.SAVE_LOCALLY == "YES":
-            if not os.path.exists(os.path.join(self.config.PROCESS_DIR, filename + ".tmp")):
-                with open(os.path.join(self.config.PROCESS_DIR, filename + ".tmp"), "w") as local_file:
-                    local_file.writelines(decrypted_file)
-                os.rename(os.path.join(self.config.PROCESS_DIR, filename + ".tmp"), os.path.join(self.config.PROCESS_DIR, filename))
-                self.logger.info("File %s saved successfully", filename)
-            else:
-                self.logger.warning("{} already exist in {}".format(filename, self.config.PROCESS_DIR))
+        if not os.path.exists(os.path.join(self.config.PROCESS_DIR, filename + ".tmp")):
+            with open(os.path.join(self.config.PROCESS_DIR, filename + ".tmp"), "w") as local_file:
+                local_file.writelines(decrypted_file)
+            os.rename(os.path.join(self.config.PROCESS_DIR, filename + ".tmp"),
+                      os.path.join(self.config.PROCESS_DIR, filename))
+            self.logger.info("File %s saved successfully", filename)
+        else:
+            self.logger.warning("{} already exist in {}".format(filename, self.config.PROCESS_DIR))
 
     """
     Decrypt a file content
@@ -429,7 +434,7 @@ if __name__ == "__main__":
 
     try:
         # start a dedicated thread that will run the LogsDownloader logs fetching logic
-        process_thread = threading.Thread(target=logsDownloader.get_log_files, name="process_thread")
+        process_thread = threading.Thread(target=logsDownloader.get_index_file, name="process_thread")
         # start the thread
         process_thread.start()
         while logsDownloader.running:
