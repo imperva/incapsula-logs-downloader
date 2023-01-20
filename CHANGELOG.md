@@ -1,5 +1,10 @@
 # CHANGELOG.md
 
+## 2.4.0
+Features:
+ - removing the download process from the main thread with async pools
+ - added an incoming directory for initial download, now we download to incoming, move to process and finally to archive
+ - LastKnownDownloadedFileId.txt has been removed and no longer used
 ## 2.3.0
 Features:
  - converted syslog_handler to native sockets lb

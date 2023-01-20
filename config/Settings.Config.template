@@ -1,7 +1,8 @@
 [SETTINGS]
 APIID=123456789
 APIKEY=xxxxx-xxxxx-xxxxx-xxxxx
-PROCESS_DIR=/tmp/processed/
+INCOMING_DIR=
+PROCESS_DIR=
 ARCHIVE_DIR=
 BASEURL=https://logs1.incapsula.com/123456_456789/
 USEPROXY=NO

@@ -24,13 +24,19 @@ class Config:
             config_parser.read(config_file)
             config = Config(self.config_path, self.logger)
 
-            # Check for environment variables first, then load config values. Backwards compatibility with non-docker deployments
+            # Check for environment variables first, then load config values.
+            # Backwards compatibility with non-docker deployments
             config.API_ID = os.environ.get('IMPERVA_API_ID', config_parser.get("SETTINGS", "APIID"))
             config.API_KEY = os.environ.get('IMPERVA_API_KEY', config_parser.get("SETTINGS", "APIKEY"))
+            config.INCOMING_DIR = os.environ.get('IMPERVA_INCOMING_DIR',
+                                                 os.path.join(config_parser.get('SETTINGS', 'INCOMING_DIR'), "")
+                                                 or os.path.join(os.getcwd(), "incoming"))
             config.PROCESS_DIR = os.environ.get('IMPERVA_LOG_DIRECTORY',
-                                                os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), ""))
+                                                os.path.join(config_parser.get("SETTINGS", "PROCESS_DIR"), "")
+                                                or os.path.join(os.getcwd(), "process"))
             config.ARCHIVE_DIR = os.environ.get('IMPERVA_ARCHIVE_DIR',
-                                                os.path.join(config_parser.get('SETTINGS', 'ARCHIVE_DIR'), "") or None)
+                                                os.path.join(config_parser.get('SETTINGS', 'ARCHIVE_DIR'), "")
+                                                or os.path.join(os.getcwd(), "archive"))
             config.BASE_URL = os.environ.get('IMPERVA_API_URL',
                 os.path.join(config_parser.get("SETTINGS", "BASEURL"), ""))
             config.USE_PROXY = os.environ.get('IMPERVA_USE_PROXY', config_parser.get("SETTINGS", "USEPROXY"))

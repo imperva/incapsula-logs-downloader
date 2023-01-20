@@ -20,7 +20,7 @@ class LogsFileIndex:
     Gets the indexed log files
     """
 
-    def indexed_logs(self):
+    def indexed_logs(self) -> list:
         return self.content
 
     """

@@ -42,7 +42,7 @@ class FileDownloader:
 
             # if we get a 200 OK response
             if response.status == 200:
-                self.logger.info("Successfully downloaded file from URL %s" % url)
+                self.logger.info("Downloaded %s" % url)
                 # read the response content
                 response_content = response.data
             # if we get another response code
