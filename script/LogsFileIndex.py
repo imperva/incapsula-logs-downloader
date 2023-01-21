@@ -1,4 +1,5 @@
 import re
+import os
 
 """
 
@@ -38,6 +39,8 @@ class LogsFileIndex:
             if LogsFileIndex.validate_logs_index_file_format(content):
                 self.content = content.splitlines()
                 self.hash_content = set(self.content)
+                with open(os.path.join(os.getcwd(), "logs.index"), "wb") as fp:
+                    fp.write(file_content)
             else:
                 self.logger.error("log.index, Pattern Validation Failed")
                 raise Exception

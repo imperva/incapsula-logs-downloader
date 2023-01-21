@@ -3,6 +3,7 @@ import time
 import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+import urllib3
 
 
 # Create an HTTP client to send messages to Splunk HEC
@@ -36,6 +37,7 @@ class HttpClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session = requests.Session()
         self.session.mount("https://", adapter)
+        urllib3.disable_warnings()
 
     # Send the messages
     def send(self, data):
@@ -60,7 +62,7 @@ class HttpClient:
         body = json.dumps(messages)
 
         try:
-            response = self.session.post(url=self.full_url, data=body, timeout=(5, 15), verify=False,
+            response = self.session.post(url=self.full_url, data=body, timeout=(15, 15), verify=False,
                                          headers={'Content-Type': 'application/json',
                                                   'Authorization': 'Splunk ' + self.token})
             # Returning true if everything is good, if not log the error and return None.

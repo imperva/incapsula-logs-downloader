@@ -63,10 +63,7 @@ class HandlingLogs:
                         if self.remote_logger.send(messages):
                             # Archive the log if sent successfully
                             if self.config.ARCHIVE_DIR is not None:
-                                archived = os.path.join(self.config.ARCHIVE_DIR, file)
-                                self.logger.info("Sent all messages, archiving {} to {}"
-                                                 .format(original, archived))
-                                os.rename(original, archived)
+                                self.archive_log(original, file)
                             else:
                                 # Delete the log if not archiving
                                 self.logger.info("Sent all messages, deleting {}"
@@ -85,6 +82,14 @@ class HandlingLogs:
                                         self.SEND_GOOD = True
                                         self.logger.warning("-----Changing SEND_GOOD to {}--------"
                                                             .format(self.SEND_GOOD))
+                                        # Archive the log if sent successfully
+                                        if self.config.ARCHIVE_DIR is not None:
+                                            self.archive_log(original, file)
+                                        else:
+                                            # Delete the log if not archiving
+                                            self.logger.info("Sent all messages, deleting {}"
+                                                             .format(original))
+                                            os.remove(original)
                                         break
                                     else:
                                         retries += 1
@@ -105,3 +110,16 @@ class HandlingLogs:
         if sig == signal.SIGTERM:
             self.RUNNING = False
             self.logger.info("Got a termination signal, will now shutdown and exit gracefully")
+
+    def archive_log(self, original, file):
+        # Archive the log if sent successfully
+        if self.config.ARCHIVE_DIR is not None:
+            archived = os.path.join(self.config.ARCHIVE_DIR, file)
+            self.logger.info("Sent all messages, archiving {} to {}"
+                             .format(original, archived))
+            os.rename(original, archived)
+        else:
+            # Delete the log if not archiving
+            self.logger.info("Sent all messages, deleting {}"
+                             .format(original))
+            os.remove(original)

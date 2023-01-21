@@ -33,6 +33,7 @@
 #
 
 import base64
+import datetime
 import getopt
 import hashlib
 from logging import handlers
@@ -59,6 +60,7 @@ Main class for downloading log files
 class LogsDownloader:
     # the LogsDownloader will run until external termination
     RUNNING = True
+    _start_total = None
 
     def __init__(self, config_path, system_log_path, log_level):
         # set a log file for the downloader
@@ -71,7 +73,7 @@ class LogsDownloader:
         # keep logs history for 7 days
         file_handler = logging.handlers.TimedRotatingFileHandler(os.path.join(log_dir, "logs_downloader.log"),
                                                                  when='midnight', backupCount=7)
-        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        formatter = logging.Formatter("%(asctime)s %(threadName)s %(levelname)s %(message)s")
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
 
@@ -95,6 +97,9 @@ class LogsDownloader:
         # Create the needed directories for handling the logs incoming, process, archive
         if not os.path.exists(self.config.INCOMING_DIR):
             os.makedirs(self.config.INCOMING_DIR)
+        else:
+            for file in os.listdir(self.config.INCOMING_DIR):
+                os.remove(os.path.join(self.config.INCOMING_DIR, file))
         if not os.path.exists(self.config.PROCESS_DIR):
             os.makedirs(self.config.PROCESS_DIR)
         if not os.path.exists(self.config.ARCHIVE_DIR):
@@ -129,127 +134,63 @@ class LogsDownloader:
             # if last_log_id == "":
             #     self.logger.info(
             #         "No last downloaded file is found - downloading index file and starting to download all the log files in it")
-                try:
-                    # download the logs.index file
-                    self.logs_file_index.download()
-                    # scan it and download all of the files in it
-                    self.start_log_processing()
-                    time.sleep(5)
-                except Exception as e:
-                    self.logger.error(
-                        "Failed to downloading index file and starting to download all the log files in it - %s, %s", e,
-                        traceback.format_exc())
-                    # wait for 5 seconds between each iteration
-                    self.logger.info("Sleeping for 5 seconds before trying to fetch logs again...")
-                    time.sleep(5)
-                    # continue
-            # the is a last downloaded log file id
-            # else:
-            #     self.logger.debug("The last known downloaded file is %s", last_log_id)
-            #     # get the next log file name that we should download
-            #     next_file = self.last_known_downloaded_file_id.get_next_file_name()
-            #     self.logger.debug("Will now try to download %s", next_file)
-            #     try:
-            #         # download and handle the next log file
-            #         # success = self.handle_file(next_file)
-            #         # if we successfully handled the next log file
-            #         pool = ThreadPool(processes=1)
-            #         success = pool.apply_async(self.handle_file, (next_file, 5))
-            #         print("Started thread for log {}".format(next_file))
-            #         while not success.get(5):
-            #             print("Still waiting")
-            #             time.sleep(1)
-            #         if success.get():
-            #             self.logger.debug("Successfully handled file %s, updating the last known downloaded file id",
-            #                               next_file)
-            #
-            #             if self.RUNNING:
-            #                 self.logger.info("Sleeping for 2 seconds before fetching the next logs file")
-            #                 retries = 0
-            #                 time.sleep(2)
-            #                 # set the last handled log file information
-            #                 self.last_known_downloaded_file_id.move_to_next_file()
-            #
-            #                 # we failed to handle the next log file
-            #         else:
-            #             self.logger.info("Could not get log file %s. It could be that the log file does not exist yet.",
-            #                              next_file)
-            #             if self.RUNNING:
-            #                 if retries >= 10:
-            #                     self.logger.info("Failed to download file 10 times, trying to recover.")
-            #                     # download the logs.index file
-            #                     self.logs_file_index.download()
-            #                     logs_in_index = self.logs_file_index.indexed_logs()
-            #                     log_id = self.get_counter_from_file_name(next_file)
-            #                     first_log_id_in_index = self.get_counter_from_file_name(logs_in_index[0])
-            #                     if log_id < first_log_id_in_index:
-            #                         self.logger.error(
-            #                             "Current downloaded file is not in the index file any more. This is probably due to a long delay in downloading. Attempting to recover")
-            #                         self.last_known_downloaded_file_id.remove_last_log_id()
-            #                     elif self.last_known_downloaded_file_id.get_next_file_name(
-            #                             skip_files=1) in logs_in_index:
-            #                         self.logger.warning("Skipping " + next_file)
-            #                         self.last_known_downloaded_file_id.move_to_next_file()
-            #                     else:
-            #                         self.logger.info(
-            #                             "Next file still does not exist. Sleeping for 30 seconds and continuing normally")
-            #                         retries = 0
-            #                         time.sleep(5)
-            #                 else:
-            #                     # wait for 30 seconds between each iteration
-            #                     self.logger.info("Sleeping for 5 seconds before trying to fetch logs again...")
-            #                     retries += 1
-            #                     time.sleep(5)
-            #
-            #     except Exception as e:
-            #         self.logger.error("Failed to download file %s. Error is - %s , %s", next_file, e,
-            #                           traceback.format_exc())
+            try:
+                # download the logs.index file
+                self.logs_file_index.download()
+                # Start a timer and start processing the index
+                self._start_total = time.perf_counter()
+                self.start_log_processing()
+                # Get the missed indexes where we had issue, downloading or processing.
+                self.log_missed_indexes()
+                self.logger.info("Sleeping for 5 seconds before trying to fetch logs again...")
+                time.sleep(5)
+            except Exception as e:
+                self.logger.error(
+                    "Failed to downloading index file and starting to download all the log files in it - %s, %s", e,
+                    traceback.format_exc())
+                # wait for 5 seconds between each iteration
+                self.logger.info("Sleeping for 5 seconds before trying to fetch logs again...")
+                time.sleep(5)
+
 
     """
     Scan the logs.index file, and download all the log files in it
     """
 
     def start_log_processing(self):
-
-        _start_total = time.perf_counter()
-        # get the list of file names from the index file
+        # get the list of file names from the index file and compare with the current processed index list
         logs_in_index = self.logs_file_index.indexed_logs()
-        current = os.listdir(self.config.PROCESS_DIR)
+        current = self.get_indexed()
         additions = [x for x in logs_in_index if x not in current]
+        # additions += [x for x in current if x not in logs_in_index]
 
         if additions.__len__() == 0:
             self.logger.info("No new logs to download, waiting...")
             return
         # for each file
         self.logger.info("We found {} new logs to download.".format(len(additions)))
+        pool = ThreadPool(processes=10)
         for log_file_name in additions:
-            if not os.path.exists(os.path.join(self.config.PROCESS_DIR, log_file_name))\
-                    and not os.path.exists(os.path.join(self.config.ARCHIVE_DIR, log_file_name)):
-                _start = time.perf_counter()
-                # if self.RUNNING:
-                if LogsFileIndex.validate_log_file_format(str(log_file_name.rstrip('\r\n'))):
-                    # download and handle the log file
-                    pool = ThreadPool(processes=1)
-                    result = pool.apply_async(self.handle_file, (log_file_name, 5))
-
-                    # if we successfully handled the log file
-                    while not result.get(5):
-                        print("Still waiting")
-                        time.sleep(1)
-                    if result.get():
-                        self.logger.debug(time.perf_counter() - _start)
-                    else:
-                        # removing the file from the current index and will try again on next round
-                        additions.remove(log_file_name)
-                        self.logger.warning("Failed to download File %s.", log_file_name)
-                        self.logger.debug(time.perf_counter() - _start)
-            else:
-                self.logger.info("{} already exist, moving on.".format(log_file_name))
-        self.logger.debug("Total time to download {} files: {}".format(len(additions),
-                                                                       time.perf_counter() - _start_total))
+            if LogsFileIndex.validate_log_file_format(str(log_file_name.rstrip('\r\n'))):
+                pool.apply_async(self.handle_file, (log_file_name, 5), callback=self.update_index)
+        pool.close()
+        pool.join()
+        self.logger.debug("It took {} seconds to download {} files.".format(time.perf_counter() - self._start_total, additions.__len__()))
     """
     Download a log file, decrypt, unzip, and store it
     """
+
+    def update_index(self, result):
+        current_index = self.logs_file_index.indexed_logs()
+        if result[1] in current_index:
+            output = result[1].split(".")[0].split("_")[1]
+            with open(os.path.join(os.getcwd(), "complete.log"), "a") as fp:
+                fp.write("{}\n".format(output))
+
+        if result[0]:
+            self.logger.info("Downloaded {}".format(result[1]))
+        else:
+            self.logger.error("Downloading {}".format(result[1]))
 
     def handle_file(self, logfile, wait_time=5):
         # we will try to get the file a max of 3 tries
@@ -265,8 +206,7 @@ class LogsDownloader:
                         decrypted_file = self.decrypt_file(result[1], logfile)
                         # handle the decrypted content
                         self.handle_log_decrypted_content(logfile, decrypted_file)
-                        self.logger.info("File %s download completed successfully", logfile)
-                        return True
+                        return True, logfile
                     # if an exception occurs during the decryption or handling the decrypted content,
                     # we save the raw file to a "fail" folder
                     except Exception as e:
@@ -290,9 +230,9 @@ class LogsDownloader:
                         time.sleep(wait_time)
             # if the downloader was stopped
             else:
-                return False
+                return False, logfile
         # if we didn't succeed to download the file
-        return False
+        return False, logfile
     """
     Saves the decrypted file content to a log file in the filesystem
     """
@@ -415,9 +355,36 @@ class LogsDownloader:
     Gets the next log file name that we should download
     """
 
-    def get_counter_from_file_name(self, file_name):
+    @staticmethod
+    def get_counter_from_file_name(file_name):
         curr_log_file_name_arr = file_name.split("_")
         return int(curr_log_file_name_arr[1].rstrip(".log"))
+
+    @staticmethod
+    def get_missed_indexes() -> list:
+        with open(os.path.join(os.getcwd(), "complete.log"), "rb") as fp:
+            content = fp.read().decode("utf-8")
+            lst = list(map(int, content.splitlines()))
+            lst.sort()
+        return sorted(set(range(lst[0], lst[-1])) - set(lst))
+
+    def log_missed_indexes(self):
+        missed_index = self.get_missed_indexes()
+        self.logger.debug("Updating missed_indexes with {} indexes.".format(missed_index.__len__()))
+        account_id = self.config.BASE_URL.split("/")[3].split("_")[0]
+        with open(os.path.join(os.getcwd(), "missed_indexes.log"), "w") as fp:
+            for index in missed_index:
+                fp.write("{}: {}_{}.log\n".format(datetime.datetime.utcnow(), account_id, index))
+
+    def get_indexed(self) -> list:
+        lst = []
+        account_id = self.config.BASE_URL.split("/")[3].split("_")[0]
+        with open(os.path.join(os.getcwd(), "complete.log"), "rb") as fp:
+            content = fp.read().decode("utf-8")
+        for index in content.splitlines():
+            lst.append("{}_{}.log".format(account_id, index))
+        return lst
+
 
 
 if __name__ == "__main__":
