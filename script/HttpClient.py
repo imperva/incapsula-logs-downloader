@@ -69,15 +69,20 @@ class HttpClient:
             if 299 > response.status_code > 199:
                 return True
             else:
-                self.logger.error("{} return status code: {}\n{}".format(self.url, response.status_code, response.text))
-                return None
+                self.logger.error("{} return status code: {}".format(self.url, response.status_code))
+                return False
         except requests.HTTPError as e:
-            self.logger.error(e)
+            self.logger.error("{}: {}".format(__class__, e))
+            return False
         except requests.ConnectionError as e:
-            self.logger.error(e)
+            self.logger.error("{}: {}".format(__class__, e))
+            return False
         except requests.Timeout as e:
-            self.logger.error(e)
+            self.logger.error("{}: {}".format(__class__, e))
+            return False
         except requests.RequestException as e:
-            self.logger.error(e)
+            self.logger.error("{}: {}".format(__class__, e))
+            return False
+
 
 

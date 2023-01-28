@@ -10,7 +10,8 @@ LogsFileIndex - A class for managing the logs files index file
 
 class LogsFileIndex:
 
-    def __init__(self, config, logger, downloader):
+    def __init__(self, config, logger, downloader, config_path):
+        self.config_path = config_path
         self.config = config
         self.content = None
         self.hash_content = None
@@ -39,7 +40,7 @@ class LogsFileIndex:
             if LogsFileIndex.validate_logs_index_file_format(content):
                 self.content = content.splitlines()
                 self.hash_content = set(self.content)
-                with open(os.path.join(os.getcwd(), "logs.index"), "wb") as fp:
+                with open(os.path.join(self.config_path, "logs.index"), "wb") as fp:
                     fp.write(file_content)
             else:
                 self.logger.error("log.index, Pattern Validation Failed")
