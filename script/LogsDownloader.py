@@ -63,6 +63,7 @@ class LogsDownloader:
     RUNNING = True
     _start_total = None
     pool = ThreadPool()
+    downloaded = []
 
     def __init__(self, config_path, system_log_path, log_level):
         # set a log file for the downloader
@@ -134,8 +135,6 @@ class LogsDownloader:
                 # Start a timer and start processing the index
                 self._start_total = time.perf_counter()
                 self.start_log_processing()
-                # Get the missed indexes where we had issue, downloading or processing.
-                self.log_missed_indexes()
             except Exception as e:
                 self.logger.error(
                     "Failed to downloading index file and starting to download all the log files in it - %s, %s", e,
@@ -152,11 +151,17 @@ class LogsDownloader:
     def start_log_processing(self):
         # Get the list of file names from the index file and compare with the current processed index list
         logs_in_index = self.logs_file_index.indexed_logs()
-        current = self.get_indexed()
-        additions = [x for x in logs_in_index if x not in current]
-        deletion = [x for x in current if x not in logs_in_index]
+        self.downloaded = self.get_indexed()
+        additions = [x for x in logs_in_index if x not in self.downloaded]
+        deletion = [x for x in self.downloaded if x not in logs_in_index]
+        completed = [x for x in logs_in_index if x not in deletion]
 
-        if additions.__len__() == 0:
+        if len(deletion) > 0:
+            self.logger.info("Clean up the passed/purged indexes.")
+            self.update_complete_file(completed)
+            self.logger.info("Pre and post index length: {} - {}".format(len(self.downloaded), len(self.get_indexed())))
+
+        if len(additions) == 0:
             self.logger.info("{} new logs to download.".format(len(additions)))
             time.sleep(3)
             return
@@ -177,15 +182,22 @@ class LogsDownloader:
                     break
         self.logger.debug("It took {} seconds to download {} files.".format(time.perf_counter() - self._start_total,
                                                                             additions.__len__()))
-
+        # Get the missed indexes where we had issue, downloading or processing.
+        self.log_missed_indexes()
     """
     Check the currently downloaded "LOGS.INDEX" against the local complete.log and remove items that no longer exist
     prior to the first item in the "LOGS.INDEX"
     """
 
-    def clear_earlier_index(self):
-        current_index = self.logs_file_index.indexed_logs()
-        downloaded_index = self.get_indexed()
+    def update_complete_file(self, completed):
+        self.logger.info("Update the complete.log with downloaded file(s).")
+        with open(os.path.join(self.config_path, "complete.log"), "w") as fw:
+            for item in completed:
+                try:
+                    fw.writelines("{}\n".format(item.split(".")[0].split("_")[1]))
+                except OSError as e:
+                    self.logger.error("Updating file {}.".format(os.path.join(self.config_path, "complete.log"), e))
+
 
 
     """
@@ -197,9 +209,8 @@ class LogsDownloader:
             self.logger.info("Downloaded {}".format(result[1]))
             current_index = self.logs_file_index.indexed_logs()
             if result[1] in current_index:
-                output = result[1].split(".")[0].split("_")[1]
-                with open(os.path.join(self.config_path, "complete.log"), "a") as fp:
-                    fp.write("{}\n".format(output))
+                self.downloaded.append(result[1])
+                self.update_complete_file(self.downloaded)
         else:
             self.logger.error("Downloading {}".format(result[1]))
 

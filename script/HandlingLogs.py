@@ -43,6 +43,9 @@ class HandlingLogs:
                             self.logger.warning("Exiting the 'for file' loop in watch_files function.")
                             break
                         self._start = time.perf_counter()
+                        if self.pool is None:
+                            self.logger.warning("No file_watcher pool, exiting the watch_files function.")
+                            break
                         try:
                             res = self.pool.apply_async(self.send_file, (file,), callback=self.update_index)
                             res.wait(15)
@@ -117,13 +120,15 @@ class HandlingLogs:
             else:
                 self.logger.error("Sending {}".format(result[1]))
         except Exception as e:
-            print(e)
+            self.logger.error(e)
 
     def archive_log(self, original, file):
         # Archive the log if sent successfully
         import gzip
         self.logger.debug("----Let's compress and archive {}".format(original))
         try:
+            if not os.path.exists(self.config.ARCHIVE_DIR):
+                os.makedirs(self.config.ARCHIVE_DIR)
             with open(original, "rb") as of:
                 original_data = of.read()
             with gzip.open(os.path.join(self.config.ARCHIVE_DIR, file + ".gz"), "wb") as compress_data:

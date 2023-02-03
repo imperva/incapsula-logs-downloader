@@ -72,16 +72,16 @@ class HttpClient:
                 self.logger.error("{} return status code: {}".format(self.url, response.status_code))
                 return False
         except requests.HTTPError as e:
-            self.logger.error("{}: {}".format(__class__, e))
+            self.logger.exception(e)
             return False
         except requests.ConnectionError as e:
-            self.logger.error("{}: {}".format(__class__, e))
+            self.logger.exception(e)
             return False
         except requests.Timeout as e:
-            self.logger.error("{}: {}".format(__class__, e))
+            self.logger.exception(e)
             return False
         except requests.RequestException as e:
-            self.logger.error("{}: {}".format(__class__, e))
+            self.logger.exception(e)
             return False
 
 

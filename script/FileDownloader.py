@@ -1,4 +1,4 @@
-import urllib3
+import urllib3.exceptions
 import traceback
 
 """
@@ -33,6 +33,7 @@ class FileDownloader:
 
     def request_file_content(self, url):
         # default value
+        global response
         response_content = ""
 
         try:
@@ -51,17 +52,16 @@ class FileDownloader:
                 response.close()
             elif response.status == 401:
                 self.logger.error("Authorization error - Failed to download file %s. Response code is %s", url,
-                    response.status)
+                                  response.status)
                 response.close()
                 raise Exception("Authorization error")
             elif response.status == 429:
                 self.logger.error("Rate limit exceeded - Failed to download file %s. Response code is %s", url,
-                    response.status)
+                                  response.status)
                 response.close()
                 raise Exception("Rate limit error")
             else:
-                self.logger.error("Failed to download file %s. Response code is %s. Data is %s", url, response.status,
-                    response.data)
+                self.logger.error("Failed to download file %s. Response code is %s.", url, response.status)
                 response.close()
             # close the response
             response.close()
@@ -69,15 +69,11 @@ class FileDownloader:
             return response_content
 
         except urllib3.exceptions.HTTPError as e:
-            print('Request failed:', e)
-            self.logger.error("An error has occur while making a open connection to %s. %s", url, str(e.reason))
-            response.close()
+            self.logger.exception(e)
             raise Exception("Connection error")
         # unexpected exception occurred
-        except Exception:
-            self.logger.error("An error has occur while making a open connection to %s. %s", url,
-                traceback.format_exc())
-            response.close()
+        except Exception as e:
+            self.logger.exception(e)
             raise Exception("Connection error")
         finally:
             response.close()
