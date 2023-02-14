@@ -110,17 +110,20 @@ class HandlingLogs:
                     return False, file
 
     def update_index(self, result):
-        try:
-            if result[0]:
-                self.logger.debug("Took {} seconds to send {}.".format(time.perf_counter() - self._start, result[1]))
-                output = result[1]
-                output = output.split(".")[0].split("_")[1]
-                with open(os.path.join(self.config.config_path, "sent.log"), "a") as fp:
-                    fp.write("{}\n".format(output))
-            else:
-                self.logger.error("Sending {}".format(result[1]))
-        except Exception as e:
-            self.logger.error(e)
+        if result:
+            try:
+                if result[0]:
+                    self.logger.debug("Took {} seconds to send {}.".format(time.perf_counter() - self._start, result[1]))
+                    output = result[1]
+                    output = output.split(".")[0].split("_")[1]
+                    with open(os.path.join(self.config.config_path, "sent.log"), "a") as fp:
+                        fp.write("{}\n".format(output))
+                else:
+                    self.logger.error("Sending {}".format(result[1]))
+            except Exception as e:
+                self.logger.error(" updating sent.log index. {}".format(e))
+        else:
+            self.logger.warning(", nothing returned from file send function.")
 
     def archive_log(self, original, file):
         # Archive the log if sent successfully
