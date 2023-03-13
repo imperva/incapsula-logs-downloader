@@ -1,8 +1,8 @@
-FROM python:3
+FROM python:3.9
 
 # Copy our script and make it executable
-COPY ./script/LogsDownloader.py /usr/local/bin/imperva-connector.py
-RUN chmod 755 /usr/local/bin/imperva-connector.py
+COPY ./script/* /usr/local/bin/
+RUN chmod 755 /usr/local/bin/LogsDownloader.py
 
 # We need SWIG as well
 RUN apt-get update
@@ -16,4 +16,4 @@ RUN python3 -m pip install -r /requirements.txt
 COPY ./config/Settings.Config /etc/incapsula/logs/config/Settings.Config
 
 # Run our script
-CMD "/usr/local/bin/imperva-connector.py"
+CMD "/usr/local/bin/LogsDownloader.py"
