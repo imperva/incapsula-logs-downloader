@@ -356,9 +356,10 @@ class LogsDownloader:
             self.logger.info("Got a termination signal, will now shutdown and exit gracefully")
 
             self.logger.debug("Terminating {} worker threads in thread pool.".format(current_threads))
-            self.file_watcher.pool.terminate()
-            self.file_watcher.pool.join()
-            self.file_watcher.RUNNING = False
+            if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
+                self.file_watcher.pool.terminate()
+                self.file_watcher.pool.join()
+                self.file_watcher.RUNNING = False
             self.pool.terminate()
             self.pool.join()
             self.RUNNING = False
