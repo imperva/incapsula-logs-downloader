@@ -89,38 +89,38 @@ The connector script will look for the following environment variables, and fall
 * IMPERVA_INCOMING_DIR (optional) - Directory to download logs temporally and then move to process directory. 
   * Default: current working directory/incoming
 * IMPERVA_PROCESS_DIR (optional) - Directory to move downloaded files into for processing; i.e. send to SIEM via HTTP, SYSLOG or Splunk Forwarder.
- * Default: current working directory/process
+  * Default: current working directory/process
 * IMPERVA_ARCHIVE_DIR (optional) - Directory to archive processed and compressed logs. 
- * Default: current working directory/archive
+  * Default: current working directory/archive
 * IMPERVA_USE_PROXY (optional) - Use a proxy with "YES". 
- * Default: "NO"
+  * Default: "NO"
 * IMPERVA_PROXY_SERVER (optional) - Use proxy IP address, ex: "192.168.1.19" No default
 * IMPERVA_USE_CUSTOM_CA_FILE (optional) - Use a CA certificate for proxy with "YES". 
- * Default: "NO"
+  * Default: "NO"
 * IMPERVA_CUSTOM_CA_FILE (optional, see note below) - Full path to CA certificate, Example: 
- * "/usr/ssl/certs/ca_cert.pem". No default
+  * "/usr/ssl/certs/ca_cert.pem". No default
 * IMPERVA_SYSLOG_ENABLE (optional) - Send to syslog with "YES". 
- * Default: "NO"
+  * Default: "NO"
 * IMPERVA_SYSLOG_ADDRESS (optional) - Use syslog server IP address, Example: 
- * "192.168.1.19" No default
+  * "192.168.1.19" No default
 * IMPERVA_SYSLOG_PORT (optional) - Use syslog server port, Example: 
- * "514" No default
+  * "514" No default
 * IMPERVA_SYSLOG_PROTO (optional) - Use TCP protocol with syslog server, Example: 
- * "TCP" Default: "UDP"
+  * "TCP" Default: "UDP"
 * IMPERVA_SPLUNK_HEC (optional) - Send to Splunk via HAC with "YES". 
- * Default: "NO"
+  * Default: "NO"
 * IMPERVA_SPLUNK_HEC_IP (optional) - Use splunk server address, IP address or FQDN, Example:
- * "https://192.168.1.19" or "https://http-inputs-unique-host.splunkcloud.com" No default
+  * "https://192.168.1.19" or "https://http-inputs-unique-host.splunkcloud.com" No default
 * IMPERVA_SPLUNK_HEC_PORT (optional) - Use splunk server port, Example: 
- * "8088" No default
+  * "8088" No default
 * IMPERVA_SPLUNK_HEC_TOKEN (optional) - Use splunk server token, Example: 
- * "B5A79AAD-D822-46CC-80D1-819F80D7BFB0" No default
+  * "B5A79AAD-D822-46CC-80D1-819F80D7BFB0" No default
 * IMPERVA_SPLUNK_HEC_SRC_HOSTNAME (optional) - Use to statically assign the hostname where the message was sent from.
 * IMPERVA_SPLUNK_HEC_INDEX (optional) - Use to statically assign the splunk index. 
- * Default "imperva" - the Imperva CWAF Dashboard requires this.
+  * Default "imperva" - the Imperva CWAF Dashboard requires this.
 * IMPERVA_SPLUNK_HEC_SOURCE (optional) - Use to statically assign the splunk source else splunk will assign the defined index in the HEC config.
 * IMPERVA_SPLUNK_HEC_SOURCETYPE (optional) - Use to statically assign the splunk source_type. 
- * Default "imperva:cef" - the Imperva CWAF Dashboard requires this.
+  * Default "imperva:cef" - the Imperva CWAF Dashboard requires this.
 
 > Note - In order to use a custom CA file, you will need to either build a docker image with the file embedded, or mount a persistent data volume to the image and provide the full path to the file as this variable value.
 
