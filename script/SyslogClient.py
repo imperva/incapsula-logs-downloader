@@ -39,23 +39,39 @@ class SyslogClient:
         sock = socket.socket(socket.AF_INET, self.socket_type)
         priority = "<{}>".format(LEVEL['info'] + FACILITY['daemon'] * 8)
 
-        # Loop over the data/messages array and create the relevant object(s) to be sent.
-        for message in data:
-            timestamp = self.get_time(message)
-            hostname = self.get_hostname(message)
-            application = "cwaf"
-            msg = "{} {} {} {} {}\n".format(priority, timestamp, hostname, application, message)
-            messages += msg
-        try:
-            sock.connect((self.host, int(self.port)))
-            sock.send(bytes(messages, 'utf-8'))
-            # Returning true if everything is good, if not log the error and return None.
+        if self.socket_type == socket.SOCK_STREAM:
+            # Loop over the data/messages array and create the relevant object(s) to be sent.
+            for message in data:
+                timestamp = self.get_time(message)
+                hostname = self.get_hostname(message)
+                application = "cwaf"
+                msg = "{} {} {} {} {}\n".format(priority, timestamp, hostname, application, message)
+                messages += msg
+            try:
+                sock.connect((self.host, int(self.port)))
+                sock.send(bytes(messages, 'utf-8'))
+                # Returning true if everything is good, if not log the error and return None.
+                return True
+            except socket.error as e:
+                self.logger.error(e)
+                return None
+            finally:
+                sock.close()
+        elif self.socket_type == socket.SOCK_DGRAM:
+            for message in data:
+                timestamp = self.get_time(message)
+                hostname = self.get_hostname(message)
+                application = "cwaf"
+                msg = "{} {} {} {} {}\n".format(priority, timestamp, hostname, application, message)
+                try:
+                    sock.sendto(bytes(msg, 'utf-8'), (self.host, int(self.port)))
+                except socket.error as e:
+                    self.logger.error(e)
+                #    return None
+                # finally:
+                #     sock.close()
+                #     # Returning true if everything is good, if not log the error and return None.
             return True
-        except socket.error as e:
-            self.logger.error(e)
-            return None
-        finally:
-            sock.close()
 
     # Function used to get the inbound timestamp to set the indexed time in epoch
     def get_time(self, message):

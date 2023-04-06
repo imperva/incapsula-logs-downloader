@@ -36,7 +36,7 @@ class Config:
                                                 or os.path.join(os.getcwd(), "process"))
             config.ARCHIVE_DIR = os.environ.get('IMPERVA_ARCHIVE_DIR',
                                                 os.path.join(config_parser.get('SETTINGS', 'IMPERVA_ARCHIVE_DIR'), "")
-                                                or os.path.join(os.getcwd(), "archive"))
+                                                or False) # os.path.join(os.getcwd(), "archive")
             config.BASE_URL = os.environ.get('IMPERVA_API_URL',
                 config_parser.get("SETTINGS", "IMPERVA_API_URL"))
             config.USE_PROXY = os.environ.get('IMPERVA_USE_PROXY', config_parser.get("SETTINGS", "IMPERVA_USE_PROXY") or "NO")

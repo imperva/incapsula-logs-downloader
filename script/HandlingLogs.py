@@ -78,6 +78,8 @@ class HandlingLogs:
                             # Archive the log if sent successfully
                             if bool(self.config.ARCHIVE_DIR):
                                 self.archive_log(file_path, file)
+                            else:
+                                self.delete_log(file_path)
                             return True, file
                         else:
                             # Go into a failed state and keep trying to send.
@@ -141,3 +143,10 @@ class HandlingLogs:
             os.remove(original)
         except (FileNotFoundError, PermissionError, OSError) as e:
             self.logger.error("Archiving file {} - {}".format(file, e))
+
+    def delete_log(self, file):
+        try:
+            os.remove(file)
+            self.logger.info("Deleted {}".format(file))
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            self.logger.error("Deleting file {} - {}".format(file, e))

@@ -92,6 +92,7 @@ The connector script will look for the following environment variables, and fall
   * Default: current working directory/process
 * IMPERVA_ARCHIVE_DIR (optional) - Directory to archive processed and compressed logs. 
   * Default: current working directory/archive
+  * #### NOTE: If IMPERVA_ARCHIVE_DIR is left empty, the logs will be deleted after sending.
 * IMPERVA_USE_PROXY (optional) - Use a proxy with "YES". 
   * Default: "NO"
 * IMPERVA_PROXY_SERVER (optional) - Use proxy IP address, ex: "192.168.1.19" No default
