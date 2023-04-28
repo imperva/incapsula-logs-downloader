@@ -116,7 +116,7 @@ class LogsDownloader:
         # Configure the remote logger, whether it be SYSLOG or Splunk HEC
         if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
             self.file_watcher = HandlingLogs(self.config, self.logger )
-            self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files)
+            self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files, name="file_watcher_thread")
             self.file_watcher_thread.start()
         self.logger.info("LogsDownloader initializing is done")
 
