@@ -60,6 +60,13 @@ class HandlingLogs:
                             except Exception as e:
                                 self.logger.error("watch_files {}".format(e))
                                 break
+                        else:
+                            # Archive the log if sent successfully
+                            file_path = os.path.join(self.config.PROCESS_DIR, file)
+                            if bool(self.config.ARCHIVE_DIR):
+                                self.archive_log(file_path, file)
+                            else:
+                                self.delete_log(file_path)
                 else:
                     time.sleep(3)
             except OSError as e:
