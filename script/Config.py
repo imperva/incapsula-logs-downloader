@@ -67,6 +67,10 @@ class Config:
                 config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SOURCE') or "log_downloader")
             config.SPLUNK_HEC_SOURCETYPE = os.environ.get('IMPERVA_SPLUNK_HEC_SOURCETYPE',
                 config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SOURCETYPE') or "imperva:cef")
+            config.ENABLE_TRACING = os.environ.get('IMPERVA_ENABLE_TRACING',
+                config_parser.get('SETTINGS', 'IMPERVA_ENABLE_TRACING'))
+            config.OTLP_ENDPOINT = os.environ.get('IMPERVA_OTLP_ENDPOINT',
+                config_parser.get('SETTINGS', 'IMPERVA_OTLP_ENDPOINT'))
             return config
         else:
             self.logger.error("Could Not find configuration file %s", config_file)

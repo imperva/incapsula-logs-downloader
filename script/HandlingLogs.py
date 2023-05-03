@@ -3,6 +3,7 @@ from HttpClient import HttpClient
 import os
 import time
 from multiprocessing.pool import ThreadPool
+from ImpervaTracing import Tracing
 
 # Creating a file watcher that will identify the downloaded logs in the configured
 # directory. This file watcher will handle the new file and send to the selected sender.
@@ -31,6 +32,10 @@ class HandlingLogs:
             self.logger.info('Splunk HEC enabled.')
             self.remote_logger = HttpClient(self.config, self.logger)
 
+        if self.config.ENABLE_TRACING == "YES":
+            self.logger.info('Distributed tracing enabled.')
+            self.tracing = Tracing(self.config, self.logger)
+
     def watch_files(self):
         while self.RUNNING:
             try:
@@ -39,19 +44,22 @@ class HandlingLogs:
 
                 if len(files) > 0:
                     for file in files:
-                        if not self.RUNNING:
-                            self.logger.warning("Exiting the 'for file' loop in watch_files function.")
-                            break
-                        self._start = time.perf_counter()
-                        if self.pool is None:
-                            self.logger.warning("No file_watcher pool, exiting the watch_files function.")
-                            break
-                        try:
-                            res = self.pool.apply_async(self.send_file, (file,), callback=self.update_index)
-                            res.wait(15)
-                        except Exception as e:
-                            self.logger.error("watch_files {}".format(e))
-                            break
+                        if self.config.ENABLE_TRACING == "YES":
+                            self.tracing.check_for_trace(file)
+                        if self.config.SYSLOG_ENABLE == "YES" or self.config.SPLUNK_HEC == "YES":
+                            if not self.RUNNING:
+                                self.logger.warning("Exiting the 'for file' loop in watch_files function.")
+                                break
+                            self._start = time.perf_counter()
+                            if self.pool is None:
+                                self.logger.warning("No file_watcher pool, exiting the watch_files function.")
+                                break
+                            try:
+                                res = self.pool.apply_async(self.send_file, (file,), callback=self.update_index)
+                                res.wait(15)
+                            except Exception as e:
+                                self.logger.error("watch_files {}".format(e))
+                                break
                 else:
                     time.sleep(3)
             except OSError as e:

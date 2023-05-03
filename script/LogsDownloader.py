@@ -52,6 +52,7 @@ from LastFileId import LastFileId
 from LogsFileIndex import LogsFileIndex
 from multiprocessing.pool import ThreadPool
 from threading import active_count
+import LoggerHealthCheck
 
 """
 Main class for downloading log files
@@ -114,7 +115,7 @@ class LogsDownloader:
         # create a logs file index handler
         self.logs_file_index = LogsFileIndex(self.config, self.logger, self.file_downloader, self.config_path)
         # Configure the remote logger, whether it be SYSLOG or Splunk HEC
-        if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
+        if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES' or self.config.ENABLE_TRACING == "YES":
             self.file_watcher = HandlingLogs(self.config, self.logger )
             self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files, name="file_watcher_thread")
             self.file_watcher_thread.start()
@@ -356,20 +357,23 @@ class LogsDownloader:
             self.logger.info("Got a termination signal, will now shutdown and exit gracefully")
 
             self.logger.debug("Terminating {} worker threads in thread pool.".format(current_threads))
-            if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
+            if self.config.SYSLOG_ENABLE == 'YES'\
+                    or self.config.SPLUNK_HEC == 'YES'\
+                    or self.config.ENABLE_TRACING == "YES":
+                self.logger.info("Terminate file_watcher threads.")
                 self.file_watcher.pool.terminate()
+                self.logger.info("Join file_watcher threads.")
                 self.file_watcher.pool.join()
+                self.logger.info("Set file_watcher RUNNING to False.")
                 self.file_watcher.RUNNING = False
+            self.logger.info("Terminate pool threads.")
             self.pool.terminate()
+            self.logger.info("Join pool threads.")
             self.pool.join()
+            self.logger.info("Set pool RUNNING to False.")
             self.RUNNING = False
             self.logger.debug("Thread worker pool termination complete")
-
-            while active_count() > 1:
-                print(active_count())
-                time.sleep(1)
-            self.logger.debug("Shutdown Complete.")
-
+            exit(0)
 
     """
     Gets the next log file name that we should download
@@ -442,14 +446,12 @@ if __name__ == "__main__":
     # set a handler for process termination
     signal.signal(signal.SIGINT, logsDownloader.set_signal_handling)
 
-
     try:
         # start a dedicated thread that will run the LogsDownloader logs fetching logic
         process_thread = threading.Thread(target=logsDownloader.get_index_file, name="process_thread", daemon=True)
         # start the thread
         process_thread.start()
         while process_thread.is_alive():
-            time.sleep(5)
-        exit(0)
+            LoggerHealthCheck.app.run(host="0.0.0.0", port=8080)
     except Exception:
         sys.exit("Error starting Logs Downloader - %s" % traceback.format_exc())
