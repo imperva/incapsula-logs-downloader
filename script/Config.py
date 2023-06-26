@@ -51,6 +51,8 @@ class Config:
                 config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_ADDRESS'))
             config.SYSLOG_PORT = os.environ.get('IMPERVA_SYSLOG_PORT', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_PORT'))
             config.SYSLOG_PROTO = os.environ.get('IMPERVA_SYSLOG_PROTO', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_PROTO') or "UDP")
+            config.SYSLOG_CUSTOM = os.environ.get('IMPERVA_SYSLOG_CUSTOM', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_CUSTOM') or "NO")
+            config.SYSLOG_SENDER_HOSTNAME = os.environ.get('IMPERVA_SYSLOG_SENDER_HOSTNAME', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_SENDER_HOSTNAME') or "imperva.com")
             config.SPLUNK_HEC = os.environ.get('IMPERVA_SPLUNK_HEC',
                 config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC') or "NO")
             config.SPLUNK_HEC_IP = os.environ.get('IMPERVA_SPLUNK_HEC_IP',
