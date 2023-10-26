@@ -84,14 +84,14 @@ The connector script will look for the following environment variables, and fall
 
 #### Required Variables/Keys
 
-| Variables/Keys | Default Value | Description |
-|-----|---------------|-------------|
+| Variables/Keys | Default Value | Description | Example |
+|-----|---------------|-------------|-|
 |IMPERVA_API_KEY||API creds that are found on your account page: https://management.service.imperva.com/my/web-logs/settings?caid=XXXXXX|
 |IMPERVA_API_ID||API creds that are found on your account page: https://management.service.imperva.com/my/web-logs/settings?caid=XXXXXX|
 |IMPERVA_API_URL||URL config found on your account page: https://management.service.imperva.com/my/web-logs/settings?caid=XXXXXX|
 
 #### Optional Variables/Keys
-| Variables/Keys | Description | Default Value | Example Value |
+| Variables/Keys | Default Value | Description | Example Value |
 |-----|---------------|-------------|-|
 |IMPERVA_INCOMING_DIR|current working directory|Directory to download logs temporally and then move to process directory||
 |IMPERVA_PROCESS_DIR|current working directory|Directory to move downloaded files into for processing; i.e. send to SIEM via HTTP, SYSLOG or Splunk Forwarder||
