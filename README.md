@@ -15,8 +15,8 @@
 ## Dependencies
 
 > This script requires Python 3
-
-The script has the following pythondependencies that may require additional installation modules, according to the operating system that is used. 
+The script has the following pythondependencies that may require additional installation modules, according to the operating system that is used.
+# Note: the encryption libraries are not needed if decryption is not being used.
 
 - **pycrypto**
 - **M2Crypto**
@@ -50,7 +50,7 @@ python LogsDownloader.py \
 - The default value for **path_to_config_folder** is **/etc/incapsula/logs/config**
 - The default value for **path_to_system_logs_folder** is **/var/log/incapsula/logsDownloader/**
 - The default value for **system_logs_level** is **info**
-- The **path_to_system_logs_folder** is the folder where the script output log file is stored. **NOTE**: This is for the script output only. The location to store the CloudWAF logs is defined in the Settings.Config file or IMPERVA_LOG_DIRECTORY environment variable.
+- The **path_to_system_logs_folder** is the folder where the script output log file is stored. **NOTE**: This is for the script output only. The location to store the CloudWAF logs is defined in the Settings.Config file or IMPERVA_INCOMING_DIR, IMPERVA_PROCESS_DIR, and IMPERVA_ARCHIVE_DIR environment variable.
 - The **system_logs_level** configuration parameter holds the logging level for the script output log. The supported levels are **info**, **debug** and **error**
 - You can run **`LogsDownloader.py -h`** to get help
 
@@ -82,21 +82,36 @@ A dockerfile is provided to build your own image locally. At this time, a docker
 
 The connector script will look for the following environment variables, and fall back to the configuration file if the environment variable is not set:
 
-	IMPERVA_API_KEY (required)  
-	IMPERVA_API_ID (required)  
-	IMPERVA_API_URL (required)  
-	IMPERVA_LOG_DIRECTORY (optional)  
-	IMPERVA_SAVE_LOCALLY (optional)  
-	IMPERVA_USE_PROXY (optional)  
-	IMPERVA_PROXY_SERVER (optional)  
-	IMPERVA_SYSLOG_ENABLE (optional)  
-	IMPERVA_SYSLOG_ADDRESS (optional)  
-	IMPERVA_SYSLOG_PORT (optional)  
-	IMPERVA_SYSLOG_PROTO (optional)  
-	IMPERVA_USE_CUSTOM_CA_FILE (optional)  
-	IMPERVA_CUSTOM_CA_FILE (optional, see note below)
+#### Required Variables/Keys
 
-> Note - In order to use a custom CA file, you will need to either build a docker image with the file embedded, or mount a persistent data volume to the image and provide the full path to the file as this variable value.
+| Variables/Keys | Default Value | Description | Example |
+|-----|---------------|-------------|-|
+|IMPERVA_API_KEY||API creds that are found on your account page: https://management.service.imperva.com/my/web-logs/settings?caid=XXXXXX|
+|IMPERVA_API_ID||API creds that are found on your account page: https://management.service.imperva.com/my/web-logs/settings?caid=XXXXXX|
+|IMPERVA_API_URL||URL config found on your account page: https://management.service.imperva.com/my/web-logs/settings?caid=XXXXXX|
+
+#### Optional Variables/Keys
+| Variables/Keys | Default Value | Description | Example Value |
+|-----|---------------|-------------|-|
+|IMPERVA_INCOMING_DIR|current working directory|Directory to download logs temporally and then move to process directory||
+|IMPERVA_PROCESS_DIR|current working directory|Directory to move downloaded files into for processing; i.e. send to SIEM via HTTP, SYSLOG or Splunk Forwarder||
+|IMPERVA_ARCHIVE_DIR|current working directory|Directory to archive processed and compressed logs <br /><br />**NOTE**: If IMPERVA_ARCHIVE_DIR is left empty, the logs will be deleted after sending||
+|IMPERVA_USE_PROXY|NO|Use a proxy with "YES"|YES|
+|IMPERVA_PROXY_SERVER||Use proxy IP address|192.168.1.19|
+|IMPERVA_USE_CUSTOM_CA_FILE|NO|Use a CA certificate for proxy with "YES"|NO|
+|IMPERVA_CUSTOM_CA_FILE||Full path to CA certificate. <br /><br />**NOTE:** In order to use a custom CA file, you will need to either build a docker image with the file embedded, or mount a persistent data volume to the image and provide the full path to the file as this variable value.|/usr/ssl/certs/ca_cert.pem|
+|IMPERVA_SYSLOG_ENABLE|NO|Send to syslog with "YES"|
+|IMPERVA_SYSLOG_ADDRESS||Use syslog server IP address|192.168.1.19|
+|IMPERVA_SYSLOG_PORT||Use syslog server port|514|
+|IMPERVA_SYSLOG_PROTO|UDP|Use TCP protocol with syslog server|TCP|
+|IMPERVA_SPLUNK_HEC|NO|Send to Splunk via HAC with YES|
+|IMPERVA_SPLUNK_HEC_IP||Use splunk server address, IP address or FQDN|https://192.168.1.19 or https://http-inputs-unique-host.splunkcloud.com|
+|IMPERVA_SPLUNK_HEC_PORT||Use splunk server port|8088|
+|IMPERVA_SPLUNK_HEC_TOKEN||Use splunk server token|B5A79AAD-D822-46CC-80D1-819F80D7BFB0|
+|IMPERVA_SPLUNK_HEC_SRC_HOSTNAME||Use to statically assign the hostname where the message was sent from|
+|IMPERVA_SPLUNK_HEC_INDEX|imperva|Use to statically assign the splunk index<br /><br />**NOTE:** If using the Imperva CWAF Dashboard, do not change the default value|
+|IMPERVA_SPLUNK_HEC_SOURCE||Use to statically assign the splunk source else splunk will assign the defined index in the HEC config.
+|IMPERVA_SPLUNK_HEC_SOURCETYPE|imperva:cef|Use to statically assign the splunk source_type<br /><br />**NOTE:** If using the Imperva CWAF Dashboard, do not change the default value|
 
 ### Encrypted Logs
 	

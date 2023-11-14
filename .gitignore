@@ -1,2 +1,5 @@
 venv
 .vscode
+./config/Settings.Config
+/config/Settings.Config
+/config/LastKnownDownloadedFileId.txt
