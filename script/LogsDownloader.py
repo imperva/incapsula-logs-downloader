@@ -366,7 +366,6 @@ class LogsDownloader:
             self.logger.debug("Thread worker pool termination complete")
 
             while active_count() > 1:
-                print(active_count())
                 time.sleep(1)
             self.logger.debug("Shutdown Complete.")
 

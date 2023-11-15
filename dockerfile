@@ -13,7 +13,7 @@ COPY ./script/requirements.txt /
 RUN python3 -m pip install -r /requirements.txt
 
 # Copy our settings
-COPY ./config/Settings.Config /etc/incapsula/logs/config/Settings.Config
+COPY ./config/Settings.Config.template /etc/incapsula/logs/config/Settings.Config
 
 # Run our script
 CMD "/usr/local/bin/LogsDownloader.py"
