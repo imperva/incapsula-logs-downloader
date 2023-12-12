@@ -37,7 +37,7 @@ class LogsFileIndex:
         if file_content != "":
             content = file_content.decode("utf-8")
             # validate the file format
-            if LogsFileIndex.validate_logs_index_file_format(content):
+            if LogsFileIndex.validate_log_file_format(content):
                 self.content = content.splitlines()
                 self.hash_content = set(self.content)
                 with open(os.path.join(self.config_path, "logs.index"), "wb") as fp:

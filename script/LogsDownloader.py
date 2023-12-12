@@ -73,19 +73,26 @@ class LogsDownloader:
         # create the log directory if needed
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        # keep logs history for 7 days
-        file_handler = logging.handlers.TimedRotatingFileHandler(os.path.join(log_dir, "logs_downloader.log"),
-                                                                 when='midnight', backupCount=7)
-        formatter = logging.Formatter("%(asctime)s %(threadName)s %(levelname)s %(message)s")
-        file_handler.setFormatter(formatter)
-        self.logger.addHandler(file_handler)
 
+        # Set logging level
         if log_level == "DEBUG":
             self.logger.setLevel(logging.DEBUG)
         elif log_level == "INFO":
             self.logger.setLevel(logging.INFO)
         elif log_level == "ERROR":
             self.logger.setLevel(logging.ERROR)
+
+        logging.basicConfig(
+            level=log_level,
+            # keep logs history for 7 days
+            handlers=[logging.handlers.TimedRotatingFileHandler(os.path.join(log_dir, "logs_downloader.log"),
+                                                                when='midnight', backupCount=7),
+                      logging.StreamHandler(sys.stdout)],
+            format="%(asctime)s %(threadName)s %(levelname)s %(message)s"
+        )
+        # file_handler.setFormatter(formatter)
+        # self.logger.addHandler(file_handler)
+
         self.logger.debug("Initializing LogsDownloader")
         self.config_path = config_path
         self.config_reader = Config(self.config_path, self.logger)
