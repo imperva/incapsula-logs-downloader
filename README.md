@@ -15,11 +15,10 @@
 ## Dependencies
 
 > This script requires Python 3
-
 The script has the following pythondependencies that may require additional installation modules, according to the operating system that is used.
 # Note: the encryption libraries are not needed if decryption is not being used.
 
-- **pycrypto**
+- **pycryptodome**
 - **M2Crypto**
 
 A requirements.txt file is included in the script directory, so that the following can be used to install requirements and dependencies:
