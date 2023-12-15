@@ -1,5 +1,6 @@
 import datetime
 import socket
+import ssl
 
 FACILITY = {
     'kern': 0, 'user': 1, 'mail': 2, 'daemon': 3,
@@ -23,12 +24,13 @@ Syslog - For sending TCP Syslog messages via socket class
 
 # Create a raw socket client to send messages to syslog server
 class SyslogClient:
-    def __init__(self, host, port, socket_type, logger):
+    def __init__(self, host, port, socket_type, logger, secure=False):
         self.host = host
         self.port = port
         self.socket_type = socket.SOCK_STREAM if socket_type == "TCP" else socket.SOCK_DGRAM
         self.logger = logger
         self.logger.debug("Send to Host={} on Port={}".format(self.host, self.port))
+        self.secure = secure
 
     # Send the messages
     def send(self, data):
@@ -47,16 +49,29 @@ class SyslogClient:
                 application = "cwaf"
                 msg = "{} {} {} {} {}\n".format(priority, timestamp, hostname, application, message)
                 messages += msg
-            try:
-                sock.connect((self.host, int(self.port)))
-                sock.send(bytes(messages, 'utf-8'))
-                # Returning true if everything is good, if not log the error and return None.
-                return True
-            except socket.error as e:
-                self.logger.error(e)
-                return None
-            finally:
-                sock.close()
+            if self.secure:
+                sock = ssl.wrap_socket(sock)
+                try:
+                    sock.connect((self.host, int(self.port)))
+                    sock.send(bytes(messages, 'utf-8'))
+                    # Returning true if everything is good, if not log the error and return None.
+                    return True
+                except ssl.SSLError as e:
+                    self.logger.error(e)
+                    return None
+                finally:
+                    sock.close()
+            else:
+                try:
+                    sock.connect((self.host, int(self.port)))
+                    sock.send(bytes(messages, 'utf-8'))
+                    # Returning true if everything is good, if not log the error and return None.
+                    return True
+                except socket.error as e:
+                    self.logger.error(e)
+                    return None
+                finally:
+                    sock.close()
         elif self.socket_type == socket.SOCK_DGRAM:
             for message in data:
                 timestamp = self.get_time(message)

@@ -26,18 +26,30 @@ class HandlingLogs:
             self.logger.info('Syslog enabled, using TCP')
             self.remote_logger = SyslogClient(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "TCP", self.logger)
 
+        if (self.config.SYSLOG_PROTO == 'TCP' and self.config.SYSLOG_ENABLE == 'YES'
+                and self.config.SYSLOG_CUSTOM == 'NO' and self.config.IMPERVA_SYSLOG_SECURE == "YES"):
+            self.logger.info('Syslog enabled, using TCP/TLS')
+            self.remote_logger = SyslogClient(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "TCP",
+                                              self.logger, True)
+
         if self.config.SYSLOG_PROTO == 'UDP' and self.config.SYSLOG_ENABLE == 'YES' and self.config.SYSLOG_CUSTOM == 'NO':
             self.logger.info('Syslog enabled, using UDP')
             self.remote_logger = SyslogClient(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "UDP", self.logger)
         
-        if self.config.SYSLOG_PROTO == 'UDP' and self.config.SYSLOG_ENABLE =='YES' and self.config.SYSLOG_CUSTOM == 'YES':
+        if self.config.SYSLOG_PROTO == 'UDP' and self.config.SYSLOG_ENABLE == 'YES' and self.config.SYSLOG_CUSTOM == 'YES':
             self.logger.info('Custom Syslog enabled, using UDP')
             self.remote_logger = SyslogClientCustom(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "UDP", self.logger, self.config.SYSLOG_SENDER_HOSTNAME)
 
-        if self.config.SYSLOG_PROTO == 'TCP' and self.config.SYSLOG_ENABLE =='YES' and self.config.SYSLOG_CUSTOM == 'YES':
+        if self.config.SYSLOG_PROTO == 'TCP' and self.config.SYSLOG_ENABLE == 'YES' and self.config.SYSLOG_CUSTOM == 'YES':
             self.logger.info('Custom Syslog enabled, using TCP')
             self.remote_logger = SyslogClientCustom(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "TCP", self.logger, self.config.SYSLOG_SENDER_HOSTNAME)
-            
+
+        if (self.config.SYSLOG_PROTO == 'TCP' and self.config.SYSLOG_ENABLE == 'YES'
+                and self.config.SYSLOG_CUSTOM == 'YES' and self.config.IMPERVA_SYSLOG_SECURE == "YES"):
+            self.logger.info('Custom Syslog enabled, using TCP/TLS')
+            self.remote_logger = SyslogClientCustom(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "TCP",
+                                                    self.logger, self.config.SYSLOG_SENDER_HOSTNAME, True)
+
         if self.config.SPLUNK_HEC == "YES":
             self.logger.info('Splunk HEC enabled.')
             self.remote_logger = HttpClient(self.config, self.logger)

@@ -108,6 +108,8 @@ The connector script will look for the following environment variables, and fall
   * "514" No default
 * IMPERVA_SYSLOG_PROTO (optional) - Use TCP protocol with syslog server, Example: 
   * "TCP" Default: "UDP"
+* IMPERVA_SYSLOG_SECURE (optional) - Use TCP/TLS protocol with syslog server with "YES". 
+  * Default: "NO"
 * IMPERVA_SPLUNK_HEC (optional) - Send to Splunk via HAC with "YES". 
   * Default: "NO"
 * IMPERVA_SPLUNK_HEC_IP (optional) - Use splunk server address, IP address or FQDN, Example:

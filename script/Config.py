@@ -36,25 +36,27 @@ class Config:
                                                 or os.path.join(os.getcwd(), "process"))
             config.ARCHIVE_DIR = os.environ.get('IMPERVA_ARCHIVE_DIR',
                                                 os.path.join(config_parser.get('SETTINGS', 'IMPERVA_ARCHIVE_DIR'), "")
-                                                or False) # os.path.join(os.getcwd(), "archive")
+                                                or False)
             config.BASE_URL = os.environ.get('IMPERVA_API_URL',
                 config_parser.get("SETTINGS", "IMPERVA_API_URL"))
-            config.USE_PROXY = os.environ.get('IMPERVA_USE_PROXY', config_parser.get("SETTINGS", "IMPERVA_USE_PROXY") or "NO")
-            config.PROXY_SERVER = os.environ.get('IMPERVA_PROXY_SERVER', config_parser.get("SETTINGS", "IMPERVA_PROXY_SERVER"))
+            config.USE_PROXY = os.environ.get('IMPERVA_USE_PROXY', config_parser.get("SETTINGS", "IMPERVA_USE_PROXY", fallback="NO"))
+            config.PROXY_SERVER = os.environ.get('IMPERVA_PROXY_SERVER', config_parser.get("SETTINGS", "IMPERVA_PROXY_SERVER", fallback="NO"))
             config.USE_CUSTOM_CA_FILE = os.environ.get('IMPERVA_USE_CUSTOM_CA_FILE',
-                config_parser.get('SETTINGS', 'IMPERVA_USE_CUSTOM_CA_FILE') or "NO")
+                config_parser.get('SETTINGS', 'IMPERVA_USE_CUSTOM_CA_FILE', fallback="NO"))
             config.CUSTOM_CA_FILE = os.environ.get('IMPERVA_CUSTOM_CA_FILE',
                 config_parser.get('SETTINGS', 'IMPERVA_CUSTOM_CA_FILE'))
             config.SYSLOG_ENABLE = os.environ.get('IMPERVA_SYSLOG_ENABLE',
-                config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_ENABLE') or "NO")
+                config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_ENABLE', fallback="NO"))
+            config.IMPERVA_SYSLOG_SECURE = os.environ.get('IMPERVA_SYSLOG_SECURE',
+                config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_SECURE', fallback="NO"))
             config.SYSLOG_ADDRESS = os.environ.get('IMPERVA_SYSLOG_ADDRESS',
                 config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_ADDRESS'))
             config.SYSLOG_PORT = os.environ.get('IMPERVA_SYSLOG_PORT', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_PORT'))
-            config.SYSLOG_PROTO = os.environ.get('IMPERVA_SYSLOG_PROTO', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_PROTO') or "UDP")
-            config.SYSLOG_CUSTOM = os.environ.get('IMPERVA_SYSLOG_CUSTOM', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_CUSTOM') or "NO")
-            config.SYSLOG_SENDER_HOSTNAME = os.environ.get('IMPERVA_SYSLOG_SENDER_HOSTNAME', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_SENDER_HOSTNAME') or "imperva.com")
+            config.SYSLOG_PROTO = os.environ.get('IMPERVA_SYSLOG_PROTO', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_PROTO', fallback="UDP"))
+            config.SYSLOG_CUSTOM = os.environ.get('IMPERVA_SYSLOG_CUSTOM', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_CUSTOM', fallback="NO"))
+            config.SYSLOG_SENDER_HOSTNAME = os.environ.get('IMPERVA_SYSLOG_SENDER_HOSTNAME', config_parser.get('SETTINGS', 'IMPERVA_SYSLOG_SENDER_HOSTNAME', fallback="imperva.com"))
             config.SPLUNK_HEC = os.environ.get('IMPERVA_SPLUNK_HEC',
-                config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC') or "NO")
+                config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC', fallback="NO"))
             config.SPLUNK_HEC_IP = os.environ.get('IMPERVA_SPLUNK_HEC_IP',
                 config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_IP'))
             config.SPLUNK_HEC_PORT = os.environ.get('IMPERVA_SPLUNK_HEC_PORT',
@@ -64,11 +66,11 @@ class Config:
             config.SPLUNK_HEC_SRC_HOSTNAME = os.environ.get('IMPERVA_SPLUNK_HEC_SRC_HOSTNAME',
                 config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SRC_HOSTNAME'))
             config.SPLUNK_HEC_INDEX = os.environ.get('IMPERVA_SPLUNK_HEC_INDEX',
-                config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_INDEX') or "imperva")
+                config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_INDEX', fallback="imperva"))
             config.SPLUNK_HEC_SOURCE = os.environ.get('IMPERVA_SPLUNK_HEC_SOURCE',
-                config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SOURCE') or "log_downloader")
+                config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SOURCE', fallback="log_downloader"))
             config.SPLUNK_HEC_SOURCETYPE = os.environ.get('IMPERVA_SPLUNK_HEC_SOURCETYPE',
-                config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SOURCETYPE') or "imperva:cef")
+                config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SOURCETYPE', fallback="imperva:cef"))
             return config
         else:
             self.logger.error("Could Not find configuration file %s", config_file)
