@@ -1,5 +1,6 @@
 import datetime
 import socket
+import ssl
 from SyslogClient import SyslogClient
 
 FACILITY = {
@@ -24,9 +25,9 @@ Syslog - For sending TCP Syslog messages via socket class
 
 # Create a raw socket client to send messages to syslog server
 class SyslogClientCustom(SyslogClient):
-    def __init__(self, host, port, socket_type, logger, log_hostname="imperva.com"):        
-        SyslogClient.__init__(self, host, port, socket_type, logger)
-        self.log_hostname=log_hostname
+    def __init__(self, host, port, socket_type, logger, log_hostname="imperva.com", secure=False):
+        SyslogClient.__init__(self, host, port, socket_type, logger, secure)
+        self.log_hostname = log_hostname
         self.logger.debug("CUSTOM Syslog enabled. Log Hostname: {}".format(log_hostname))
 
     def message_customize(self,msg):
@@ -84,16 +85,29 @@ class SyslogClientCustom(SyslogClient):
                 customized_message=self.message_customize(message)                                   
                 msg = "{} {} {} {} {}\n".format(priority, timestamp, hostname, application, customized_message)
                 messages += msg
-            try:
-                sock.connect((self.host, int(self.port)))
-                sock.send(bytes(messages, 'utf-8'))
-                # Returning true if everything is good, if not log the error and return None.
-                return True
-            except socket.error as e:
-                self.logger.error(e)
-                return None
-            finally:
-                sock.close()
+            if self.secure:
+                sock = ssl.wrap_socket(sock)
+                try:
+                    sock.connect((self.host, int(self.port)))
+                    sock.send(bytes(messages, 'utf-8'))
+                    # Returning true if everything is good, if not log the error and return None.
+                    return True
+                except ssl.SSLError as e:
+                    self.logger.error(e)
+                    return None
+                finally:
+                    sock.close()
+            else:
+                try:
+                    sock.connect((self.host, int(self.port)))
+                    sock.send(bytes(messages, 'utf-8'))
+                    # Returning true if everything is good, if not log the error and return None.
+                    return True
+                except socket.error as e:
+                    self.logger.error(e)
+                    return None
+                finally:
+                    sock.close()
         elif self.socket_type == socket.SOCK_DGRAM:
             for message in data:
                 if "|Normal|" in message: # only send alerts to syslog, otherwise skip
