@@ -83,6 +83,7 @@ class HandlingLogs:
 
     # Send the contents of the found file to the configured remote logging endpoint.
     def send_file(self, file) -> tuple:
+        messages = None
         if not os.path.isfile(os.path.join(self.config.PROCESS_DIR, file)) and not self.SEND_GOOD:
             return False, file
         else:
@@ -94,45 +95,49 @@ class HandlingLogs:
                     if not len(messages) > 0:
                         self.logger.warning("No messages added for {}".format(file))
                         return False, file
-                    if self.remote_logger is not None:
-                        self.logger.info("Number of messages added: {}".format(len(messages)))
-                        # Sent the array of message to the remote logger
-                        if self.remote_logger.send(messages):
-                            # Archive the log if sent successfully
-                            if bool(self.config.ARCHIVE_DIR):
-                                self.archive_log(file_path, file)
-                            else:
-                                self.delete_log(file_path)
-                            return True, file
-                        else:
-                            # Go into a failed state and keep trying to send.
-                            self.SEND_GOOD = False
-                            self.logger.warning("-----Changing SEND_GOOD to {}--------".format(self.SEND_GOOD))
-                            self.logger.warning("Failed to send {} lines from {}."
-                                                .format(len(messages), file_path))
-                            retries = 1
-                            while self.SEND_GOOD:
-                                try:
-                                    if self.remote_logger.send(messages):
-                                        self.SEND_GOOD = True
-                                        self.logger.warning("-----Changing SEND_GOOD to {}--------"
-                                                            .format(self.SEND_GOOD))
-                                        # Archive the log if sent successfully
-                                        if bool(self.config.ARCHIVE_DIR):
-                                            self.archive_log(file_path, file)
-                                        return True, file
-                                    else:
-                                        retries += 1
-                                        time.sleep(5)
-                                except:
-                                    self.logger.warning("Unable to send lines from file {} after {} retries."
-                                                        .format(file, retries))
-                                    retries += 1
-                                    time.sleep(5)
-
                 except OSError as e:
                     self.logger.error("Reading content for {}: {}".format(fp, e))
                     return False, file
+
+            if self.remote_logger is not None:
+                self.logger.info("Number of messages added: {}".format(len(messages)))
+                # Sent the array of message to the remote logger
+                if self.remote_logger.send(messages):
+                    # Archive the log if sent successfully
+                    if bool(self.config.ARCHIVE_DIR):
+                        self.archive_log(file_path, file)
+                    else:
+                        self.delete_log(file_path)
+                    return True, file
+                else:
+                    # Go into a failed state and keep trying to send.
+                    self.SEND_GOOD = False
+                    self.logger.warning("-----Changing SEND_GOOD to {}--------".format(self.SEND_GOOD))
+                    self.logger.warning("Failed to send {} lines from {}."
+                                        .format(len(messages), file_path))
+                    retries = 1
+                    while self.RUNNING:
+                        self.logger.warning(f"We failed to send and will continue to retry on file {file_path}.")
+                        try:
+                            if self.remote_logger.send(messages):
+                                self.SEND_GOOD = True
+                                self.logger.warning("-----Changing SEND_GOOD to {}--------"
+                                                    .format(self.SEND_GOOD))
+                                # Archive the log if sent successfully
+                                if bool(self.config.ARCHIVE_DIR):
+                                    self.archive_log(file_path, file)
+                                else:
+                                    self.delete_log(file_path)
+                                return True, file
+                            else:
+                                retries += 1
+                                time.sleep(5)
+                        except:
+                            self.logger.warning("Unable to send lines from file {} after {} retries."
+                                                .format(file, retries))
+                            retries += 1
+                            time.sleep(5)
+
 
     def update_index(self, result):
         if result:
