@@ -120,7 +120,7 @@ class LogsDownloader:
         self.logs_file_index = LogsFileIndex(self.config, self.logger, self.file_downloader, self.config_path)
         # Configure the remote logger, whether it be SYSLOG or Splunk HEC
         if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
-            self.file_watcher = HandlingLogs(self.config, self.logger )
+            self.file_watcher = HandlingLogs(self.config, self.logger)
             self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files, name="file_watcher_thread")
             self.file_watcher_thread.start()
         self.logger.info("LogsDownloader initializing is done")
@@ -362,18 +362,23 @@ class LogsDownloader:
 
             self.logger.debug("Terminating {} worker threads in thread pool.".format(current_threads))
             if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
-                self.file_watcher.pool.terminate()
-                self.file_watcher.pool.join()
                 self.file_watcher.RUNNING = False
-            self.pool.terminate()
-            self.pool.join()
+                self.logger.warning("File Watcher Pool Running set to False.")
+                self.file_watcher.pool.terminate()
+                self.logger.warning("File Watcher Pool Terminated.")
+                self.file_watcher.pool.join()
+                self.logger.warning("File Watcher Pool Joined.")
             self.RUNNING = False
+            self.logger.warning("Pool Set to False.")
+            self.pool.terminate()
+            self.logger.warning("Pool Terminated.")
+            self.pool.join()
+            self.logger.warning("Pool Joined.")
             self.logger.debug("Thread worker pool termination complete")
 
             while active_count() > 1:
                 time.sleep(1)
             self.logger.debug("Shutdown Complete.")
-
 
     """
     Gets the next log file name that we should download
