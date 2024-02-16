@@ -146,7 +146,7 @@ class HandlingLogs:
                     self.logger.debug("Took {} seconds to send {}.".format(time.perf_counter() - self._start, result[1]))
                     output = result[1]
                     output = output.split(".")[0].split("_")[1]
-                    with open(os.path.join(self.config.config_path, "sent.log"), "a") as fp:
+                    with open(os.path.join(self.config.config_path, "sent.log"), "at", encoding="utf-8") as fp:
                         fp.write("{}\n".format(output))
                 else:
                     self.logger.error("Sending {}".format(result[1]))

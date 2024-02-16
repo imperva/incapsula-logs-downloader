@@ -196,7 +196,7 @@ class LogsDownloader:
 
     def update_complete_file(self, completed):
         self.logger.info("Update the complete.log with downloaded file(s).")
-        with open(os.path.join(self.config_path, "complete.log"), "w") as fw:
+        with open(os.path.join(self.config_path, "complete.log"), "wt", encoding="utf-8") as fw:
             for item in completed:
                 try:
                     fw.writelines("{}\n".format(item.split(".")[0].split("_")[1]))
@@ -249,7 +249,7 @@ class LogsDownloader:
     def handle_log_decrypted_content(self, filename, decrypted_file):
         decrypted_file = decrypted_file.decode('utf-8')
         if not os.path.exists(os.path.join(self.config.INCOMING_DIR, "{}.tmp".format(filename))):
-            with open(os.path.join(self.config.INCOMING_DIR, "{}.tmp".format(filename)), "w") as local_file:
+            with open(os.path.join(self.config.INCOMING_DIR, "{}.tmp".format(filename)), "wt", encoding="utf-8") as local_file:
                 local_file.writelines(decrypted_file)
             os.rename(os.path.join(os.path.join(self.config.INCOMING_DIR, "{}.tmp".format(filename))),
                       os.path.join(self.config.PROCESS_DIR, filename))
@@ -402,7 +402,7 @@ class LogsDownloader:
         missed_index = self.get_missed_indexes()
         self.logger.debug("Updating missed_indexes with {} indexes.".format(missed_index.__len__()))
         account_id = self.config.BASE_URL.split("/")[3].split("_")[0]
-        with open(os.path.join(self.config_path, "missed_indexes.log"), "w") as fp:
+        with open(os.path.join(self.config_path, "missed_indexes.log"), "wt", encoding="utf-8") as fp:
             for index in missed_index:
                 fp.write("{}: {}_{}.log\n".format(datetime.datetime.utcnow(), account_id, index))
 

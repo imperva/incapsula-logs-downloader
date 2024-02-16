@@ -36,7 +36,7 @@ class LastFileId:
     def update_last_log_id(self, last_id):
         # gets the LastKnownDownloadedFileId file
         index_file_path = os.path.join(self.config_path, "LastKnownDownloadedFileId.txt")
-        with open(index_file_path, "w") as index_file:
+        with open(index_file_path, "wt", encoding="utf-8") as index_file:
             # update the id
             index_file.write(last_id)
             index_file.close()
