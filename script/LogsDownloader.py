@@ -264,6 +264,11 @@ class LogsDownloader:
     def decrypt_file(self, file_content, filename):
         # each log file is built from a header section and a content section, the two are divided by a |==| mark
         file_split_content = file_content.split(b"|==|\n")
+        # Check if file_split_content has exactly 2 parts. if not, then return the content as is.
+        # It's mean that file content is JSON
+        if len(file_split_content) != 2:
+            self.logger.info("File %s is not encrypted/compressed, returning the content as is.", filename)
+            return file_content
         # get the header section content
         file_header_content = file_split_content[0].decode('utf-8')
         # get the log section content
