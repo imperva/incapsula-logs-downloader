@@ -1,5 +1,9 @@
 # CHANGELOG.md
 
+## 2.4.1
+Features:
+- added support for JSON content files
+
 ## 2.4.0
 Features:
  - removing the download process from the main thread with async pools
