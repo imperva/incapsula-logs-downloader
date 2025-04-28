@@ -264,6 +264,13 @@ class LogsDownloader:
     def decrypt_file(self, file_content, filename):
         # each log file is built from a header section and a content section, the two are divided by a |==| mark
         file_split_content = file_content.split(b"|==|\n")
+
+        # Formats other than CEF, LEEF, and W3C do not contain headers.
+        # These formats also do not require decryption or decompression.
+        if len(file_split_content) != 2:
+            self.logger.info("File %s is not encrypted/compressed, returning the content as is.", filename)
+            return file_content
+
         # get the header section content
         file_header_content = file_split_content[0].decode('utf-8')
         # get the log section content
