@@ -1,6 +1,7 @@
 from SyslogClient import SyslogClient
 from SyslogClientCustom import SyslogClientCustom
 from HttpClient import HttpClient
+from ElasticSearchClientCustom import ElasticClientCustom
 import os
 import time
 from multiprocessing.pool import ThreadPool
@@ -20,6 +21,7 @@ class HandlingLogs:
         self.logger = logger
         logger.info("SYSLOG_PROTO: {}".format(self.config.SYSLOG_PROTO))
         logger.info("SYSLOG_CUSTOM: {}".format(self.config.SYSLOG_CUSTOM))
+
 
         # Confire the selected sender, either SysLog (TCP or UDP) or Splunk HEC.
         if self.config.SYSLOG_PROTO == 'TCP' and self.config.SYSLOG_ENABLE == 'YES' and self.config.SYSLOG_CUSTOM == 'NO':
@@ -49,10 +51,14 @@ class HandlingLogs:
             self.logger.info('Custom Syslog enabled, using TCP/TLS')
             self.remote_logger = SyslogClientCustom(self.config.SYSLOG_ADDRESS, self.config.SYSLOG_PORT, "TCP",
                                                     self.logger, self.config.SYSLOG_SENDER_HOSTNAME, True)
-
         if self.config.SPLUNK_HEC == "YES":
             self.logger.info('Splunk HEC enabled.')
             self.remote_logger = HttpClient(self.config, self.logger)
+
+        if self.config.ELASTICSEARCH_ENABLE == 'YES':
+            self.logger.info('ELASTICSEARCH enabled.')
+            self.remote_logger = ElasticClientCustom(self.config, self.logger)
+            self.logger.info('ELASTICSEARCH prop: '+self.remote_logger.es_host)
 
     def watch_files(self):
         while self.RUNNING:
@@ -70,6 +76,7 @@ class HandlingLogs:
                             self.logger.warning("No file_watcher pool, exiting the watch_files function.")
                             break
                         try:
+
                             res = self.pool.apply_async(self.send_file, (file,), callback=self.update_index)
                             res.wait(15)
                         except Exception as e:
@@ -98,6 +105,7 @@ class HandlingLogs:
                 except OSError as e:
                     self.logger.error("Reading content for {}: {}".format(fp, e))
                     return False, file
+
 
             if self.remote_logger is not None:
                 self.logger.info("Number of messages added: {}".format(len(messages)))

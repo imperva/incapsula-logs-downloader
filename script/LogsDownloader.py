@@ -118,8 +118,8 @@ class LogsDownloader:
         self.last_known_downloaded_file_id = LastFileId(self.config_path)
         # create a logs file index handler
         self.logs_file_index = LogsFileIndex(self.config, self.logger, self.file_downloader, self.config_path)
-        # Configure the remote logger, whether it be SYSLOG or Splunk HEC
-        if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES':
+        # Configure the remote logger, whether it be SYSLOG or Splunk HEC or ELASTICSEARCH
+        if self.config.SYSLOG_ENABLE == 'YES' or self.config.SPLUNK_HEC == 'YES' or self.config.ELASTICSEARCH_ENABLE == 'YES' :
             self.file_watcher = HandlingLogs(self.config, self.logger)
             self.file_watcher_thread = threading.Thread(target=self.file_watcher.watch_files, name="file_watcher_thread")
             self.file_watcher_thread.start()

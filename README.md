@@ -123,6 +123,16 @@ The connector script will look for the following environment variables, and fall
 * IMPERVA_SPLUNK_HEC_SOURCE (optional) - Use to statically assign the splunk source else splunk will assign the defined index in the HEC config.
 * IMPERVA_SPLUNK_HEC_SOURCETYPE (optional) - Use to statically assign the splunk source_type. 
   * Default "imperva:cef" - the Imperva CWAF Dashboard requires this.
+* IMPERVA_ELASTICSEARCH_ENABLE (optional) - Send to ElasticSearch via http if option is "YES".
+  * Default: "NO"
+* IMPERVA_ELASTICSEARCH (optional) - ip:port, or domain.name:port for ElasticSearch service.
+  * Default "127.0.0.1:9200"
+* IMPERVA_ELASTICSEARCH_INDEX_PATTERN (optional) - index pattern for ElasticSearch. Can expand current date/time from event timestamp (value from field end=). `my_index-%Y-%m-%d-%H`. Check strftime docs(https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior) for Format Codes.
+  * Default: "`imperva-%Y.%m.%d`"
+* IMPERVA_ELASTICSEARCH_USERNAME (optional) - Username for ElasticSearch service with basic http auth.
+  * Default ""
+* IMPERVA_ELASTICSEARCH_PASSWORD (optional) - Password for ElasticSearch service with basic http auth.
+  * Default ""
 
 > Note - In order to use a custom CA file, you will need to either build a docker image with the file embedded, or mount a persistent data volume to the image and provide the full path to the file as this variable value.
 
