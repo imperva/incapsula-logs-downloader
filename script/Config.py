@@ -20,7 +20,7 @@ class Config:
     def read(self):
         config_file = os.path.join(self.config_path, "Settings.Config")
         if os.path.exists(config_file):
-            config_parser = configparser.ConfigParser()
+            config_parser = configparser.ConfigParser(interpolation=None)
             config_parser.read(config_file)
             config = Config(self.config_path, self.logger)
 
@@ -71,6 +71,13 @@ class Config:
                 config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SOURCE', fallback="log_downloader"))
             config.SPLUNK_HEC_SOURCETYPE = os.environ.get('IMPERVA_SPLUNK_HEC_SOURCETYPE',
                 config_parser.get('SETTINGS', 'IMPERVA_SPLUNK_HEC_SOURCETYPE', fallback="imperva:cef"))
+
+            config.ELASTICSEARCH_ENABLE = os.environ.get('IMPERVA_ELASTICSEARCH_ENABLE', config_parser.get('SETTINGS', 'IMPERVA_ELASTICSEARCH_ENABLE', fallback="NO"))
+            config.ELASTICSEARCH = os.environ.get('IMPERVA_ELASTICSEARCH', config_parser.get('SETTINGS', 'IMPERVA_ELASTICSEARCH', fallback=""))
+            config.ELASTICSEARCH_USERNAME = os.environ.get('IMPERVA_ELASTICSEARCH_USERNAME', config_parser.get('SETTINGS', 'IMPERVA_ELASTICSEARCH_USERNAME', fallback=""))
+            config.ELASTICSEARCH_PASSWORD = os.environ.get('IMPERVA_ELASTICSEARCH_PASSWORD', config_parser.get('SETTINGS', 'IMPERVA_ELASTICSEARCH_PASSWORD', fallback=""))
+            config.ELASTICSEARCH_INDEX_PATTERN = os.environ.get('IMPERVA_ELASTICSEARCH_INDEX_PATTERN', config_parser.get('SETTINGS', 'IMPERVA_ELASTICSEARCH_INDEX_PATTERN', fallback="imperva-%Y.%m.%d"))
+            config.ELASTICSEARCH_SSL = os.environ.get('IMPERVA_ELASTICSEARCH_SSL', config_parser.get('SETTINGS', 'IMPERVA_ELASTICSEARCH_SSL', fallback="NO"))
             return config
         else:
             self.logger.error("Could Not find configuration file %s", config_file)
