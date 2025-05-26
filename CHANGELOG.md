@@ -1,5 +1,9 @@
 # CHANGELOG.md
 
+## 2.4.2
+Features:
+- added support for sending messages to ElasticSearch
+
 ## 2.4.1
 Features:
 - added support for JSON content files
